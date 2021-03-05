@@ -1,0 +1,133 @@
+#!/usr/bin/env php
+<?php
+declare(strict_types = 1);
+
+use Apex\Db\Cli\Cli;
+
+
+// Get location of autload.php
+if (!$autoload_file = getAutoloadLocation()) { 
+    die("Please ensure you load the Composer dependencies first.");
+}
+
+// Load Composer
+require_once($autoload_file);
+
+// Connect to redis
+$redis = getRedis();
+
+// Run CLI
+Cli::run($redis);
+
+// Exit
+exit(0);
+
+/**
+ * Get autoload.php location
+ */
+function getAutoloadLocation():?string
+{
+
+    // Files to check
+    $files = [
+        __DIR__ . '/../../autoload.php', 
+        __DIR__ . '/../autoload.php', 
+        __DIR__ . '/vendor/autoload.php', 
+        __DIR__ . '/autoload.php'
+    ];
+
+        // Go through files
+    foreach ($files as $file) { 
+        if (file_exists($file)) { 
+            return $file;
+        }
+    }
+
+    // Not found, return null
+    return null;
+
+}
+
+/**
+* Get redis connection
+ */
+function getRedis(bool $first_time = true)
+{
+
+    // Look for redis.conf file
+    $files = [
+        __DIR__ . '/redis.conf', 
+        __DIR__ . '../apex/db/redis.conf', 
+        __DIR__ . '/vendor/apex/db/redis.conf'
+    ];
+
+    // Go through files
+    foreach ($files as $file) { 
+        if (!file_exists($file)) { 
+            continue;
+        }
+
+        require_once($file);
+        break;
+    }
+
+    // Get connection info
+    if ($first_time === true) { 
+
+        $info = [
+            'host' => defined('REDIS_HOST') ? REDIS_HOST : '127.0.0.1', 
+            'port' => defined('REDIS_PORT') ? REDIS_PORT : 6379, 
+            'password' => defined('REDIS_PASSWORD') ? REDIS_PASSWORD : '', 
+            'dbindex' => defined('REDIS_DBINDEX') ? REDIS_DBINDEX : 0
+        ];
+
+    // Ask for input info
+    } else { 
+        Cli::sendHeader('Redis Connection');
+        Cli::send("Unable to connect ro redis.  You may either enter your redis connection information below, or modify the redis.conf file in your current directory to reflect correct information and bypass this step in the future.\n\n");
+
+        $info = [];
+        $info['host'] = Cli::getInput('Host [localhost]: ', 'localhost');
+        $info['port'] = Cli::getInput('Port [6379]: ', '6379');
+        $info['password'] = Cli::getInput('Password []: ', '');
+        $info['dbindex'] = Cli::getInput('DB Index [0]: ', '0');
+    }
+
+    // Try to connect
+    try {
+        $redis = connectRedis($info);
+    } catch (RedisException $e) { 
+        $redis = getRedis([], false);
+    }
+
+    // Return
+    return $redis;
+
+}
+
+/**
+ * Connect to redis
+ */
+function connectRedis(array $info)
+{
+
+    // Connect
+    $redis = new redis();
+    $redis->connect($info['host'], (int) $info['port'], 2);
+
+    // Authenticate, if needed
+    if ($info['password'] != '') { 
+        $redis->auth($info['password']);
+    }
+
+    // Select dbindex
+    if ((int) $info['dbindex'] != 0) { 
+        $redis->select((int) $info['dbindex']);
+    }
+
+    // Return
+    return $redis;
+
+}
+
+

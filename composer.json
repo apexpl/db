@@ -1,0 +1,32 @@
+{
+    "name": "apex/db", 
+    "description": "Light weight, straight forward DB interface", 
+    "type": "package",
+    "homepage": "https://apexpl.io",
+    "authors": [
+        {
+            "name": "Matt Dizak", 
+            "email": "matt.dizak@gmail.com"
+        }
+    ], 
+    "license": "MIT",
+    "require": {
+        "php": ">=8.0.0",
+        "rakibtg/sleekdb": "^2.8",
+        "league/csv": "^9.6"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "suggest": {
+        "apex/debugger": ">=0.1"
+    }, 
+    "bin": [
+        "dbmgr"
+    ], 
+    "autoload": {
+        "psr-4": { 
+            "Apex\\Db\\": "src/"
+        }
+    }
+}

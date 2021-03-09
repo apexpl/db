@@ -27,10 +27,13 @@ class PostgreSQL extends AbstractSQL implements DbInterface
      */
     public function __construct(
         array $params = [], 
-        array $readonly_params = [], 
-        ?redis $redis = null, 
-        private ?DebuggerInterface $debugger = null
-    ) { 
+        array $readonly_params = [],
+        ?redis $redis = null,  
+        private ?DebuggerInterface $debugger = null, 
+        private $onconnect_fail = null,
+        private string $charset = 'latin1',  
+        private string $tz_offset = '+0:00'
+    ) {
 
         // Set formatter
         $this->setFormatter(Format::class);
@@ -64,12 +67,22 @@ class PostgreSQL extends AbstractSQL implements DbInterface
         if ($port != 5432) { $conn_string .= ' port=' . $port; }
 
         // Connect
-        if (!$conn = @pg_connect($conn_string)) { 
-            throw new DbConnectException("Unable to connect to PostgreSQL database using supplied information.  Please double check credentials, and try again.");
+        if (!$conn = pg_connect($conn_string)) { 
+            if ($this->onconnect_fail !== null && is_callable($this->onconnect_fail)) { 
+                call_user_func($this->onconnect_fail);
+            }
+            throw new DbConnectException("Unable to connect to database using supplied information.  Error: " . pg_last_error($conn));
+        }
+
+        // Set charset
+        if (!pg_query($conn, "SET CLIENT_ENCODING TO '$this->charset';")) { 
+            throw new DbConnectException("Unable to set charset to $this->charset, error: " . pg_last_error($conn));
         }
 
         // Set timezone to UTC
-        pg_query($conn, "SET TIMEZONE TO 'UTC'");
+        if (!pg_query($conn, "SET TIMEZONE TO '$this->tz_offset'")) { 
+            throw new DbConnectException("Unable to set timezone offset to $this->tz_offset, error: " . pg_last_error($conn));
+        }
         pg_query($conn, "SET client_min_messages = 'error'");
 
         // Return
@@ -131,49 +144,49 @@ class PostgreSQL extends AbstractSQL implements DbInterface
     /**
      * Insert record into database
      */
-    public function insert(...$args):void
+    public function insert(string $table_name, ...$args):void
     {
-        $this->insertDo($this, ...$args);
+        $this->insertDo($this, $table_name, ...$args);
     }
 
     /**
      Insert or update on duplicate key
      */
-    public function insertOrUpdate(...$args):void
+    public function insertOrUpdate(string $table_name, ...$args):void
     { 
-        $this->insertOrUpdateDo($this, ...$args);
+        $this->insertOrUpdateDo($this, $table_name, ...$args);
     }
 
     /**
      * Update database table
      */
-    public function update(...$args):void
+    public function update(string $table_name, array | object $updates, ...$args):void
     {
-        $this->updateDo($this, ...$args);
+        $this->updateDo($this, $table_name, $updates, ...$args);
     }
 
     /**
      * Delete rows
      */
-    public function delete(...$args):void
+    public function delete(string $table_name, string | object $where_clause, ...$args):void
     { 
-        $this->deleteDo($this, ...$args);
+        $this->deleteDo($this, $table_name, $where_clause, ...$args);
     }
 
     /**
      * Get single / first row
      */
-    public function getRow(...$args):array | object | null
+    public function getRow(string $sql, ...$args):?array
     { 
-        return $this->getRowDo($this, ...$args);
+        return $this->getRowDo($this, $sql, ...$args);
     }
 
     /**
      * Get single row by id#
      */
-    public function getIdRow(...$args):array | object | null
+    public function getIdRow(string $table_name, string | int $id):?array
     { 
-        return $this->getIdRowDo($this, ...$args);
+        return $this->getIdRowDo($this, $table_name, $id);
     }
 
     /**
@@ -211,16 +224,15 @@ class PostgreSQL extends AbstractSQL implements DbInterface
     /**
      * Query SQL statement
      */
-    public function query(...$args):SqlQueryResult
+    public function query(string $sql, ...$args):SqlQueryResult
     { 
 
         // Get connection
-        $conn_type = preg_match("/^(select|show|describe) /i", $args[0]) ? 'read' : 'write';
+        $conn_type = $this->determineConnType($sql);
         $conn = $this->connect_mgr->getConnection($conn_type);
 
         //Format SQL
-        $map_class = class_exists($args[0]) ? array_shift($args) : '';
-        list($sql, $raw_sql, $values) = Format::stmt($conn, $args);
+        list($sql, $raw_sql, $values) = Format::stmt($conn, $sql, $args);
 
         // Add debug item, if available
         $this->debugger?->addItem('sql', $raw_sql, 3);
@@ -239,7 +251,7 @@ class PostgreSQL extends AbstractSQL implements DbInterface
         }
 
         // Return
-        return new SqlQueryResult($this, $result, $map_class);
+        return new SqlQueryResult($this, $result);
     }
 
     /**
@@ -344,9 +356,12 @@ class PostgreSQL extends AbstractSQL implements DbInterface
     /**
      * Begin transaction
      */
-    public function beginTransaction():void
+    public function beginTransaction(bool $force_write = false):void
     { 
         $this->query("BEGIN");
+
+        // Set force write
+        $this->force_write_transaction = $force_write;
     }
 
     /**
@@ -355,6 +370,7 @@ class PostgreSQL extends AbstractSQL implements DbInterface
     public function commit():void
     {
         $this->query("COMMIT");
+        $this->force_write_transaction = false;
     }
 
     /**
@@ -363,6 +379,7 @@ class PostgreSQL extends AbstractSQL implements DbInterface
     public function rollback():void
     {
         $this->query("ROLLBACK");
+        $this->force_write_transaction = false;
     }
 
     /**

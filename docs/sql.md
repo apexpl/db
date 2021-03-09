@@ -27,6 +27,7 @@ The following methods are available for all SQL drivers:
 * [executeSqlFile()](./sql/executeSqlFile.md)
 * [fetchArray()](./sql/fetchArray.md)
 * [fetchAssoc()](./sql/fetchAssoc.md)
+* [forceWrite()](./sql/forceWrite.md)
 * [getColumn()](./sql/getColumn.md)
 * [getColumnNames()](./sql/getColumnNames.md)
 * [getField()](./sql/getField.md)
@@ -42,9 +43,5 @@ The following methods are available for all SQL drivers:
 * [rollback()](./sql/rollback.md)
 * [subtractTime()](./sql/subtractTime.md)
 * [update()](./sql/update.md)
-
-
-
-
 
 

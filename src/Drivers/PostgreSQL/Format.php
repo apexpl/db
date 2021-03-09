@@ -48,12 +48,13 @@ class Format
     /**
      * Format SQL statement
      */
-    public static function stmt($conn, $args)
+    public static function stmt($conn, string $sql, $args)
     { 
 
         // Initialize
-        $args[0] = Convert::convert($args[0]);
-        list($values, $raw_sql) = array([], $args[0]);
+        $sql = Convert::convert($sql);
+        list($values, $raw_sql) = array([], $sql);
+        array_unshift($args, $sql);
 
         // Go through args
         $x=1;

@@ -49,7 +49,7 @@ class redis_test extends TestCase
         } elseif ($driver == 'postgresql') { 
             $db = new PostgreSQL([], [], $redis);
         } else { 
-            $db = new mySQL([], [], $redis);
+            $db = new mySQL(redis: $redis);
         }
 
         // Create table

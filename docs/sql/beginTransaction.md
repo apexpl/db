@@ -3,7 +3,15 @@
 
 **Description:** Begin a database transaction.  Not applicable for SQLite databases.
 
-> `voi $db->beginTransaction()`
+> `voi $db->beginTransaction(bool $force_write = false)`
+
+
+**Parameters**
+
+Param | Required | Type | Description
+------------- |------------- |------------- |------------- 
+`$force_write` | No | bool | if set to true, will force all SQL statements performed during the transaction to the write connection until a commit or rollback is executed.  Defaults to false.
+
 
 #### Example
 

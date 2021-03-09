@@ -28,9 +28,12 @@ class SQLite extends AbstractSQL implements DbInterface
      */
     public function __construct(
         array $params = [], 
-        array $readonly_params = [], 
-        ?redis $redis = null, 
-        private ?DebuggerInterface $debugger = null
+        array $readonly_params = [],
+        ?redis $redis = null,  
+        private ?DebuggerInterface $debugger = null, 
+        private $onconnect_fail = null,
+        private string $charset = 'latin1',  
+        private string $tz_offset = '+0:00'
     ) {
 
         // Set formatter
@@ -60,7 +63,10 @@ class SQLite extends AbstractSQL implements DbInterface
 
         // Connect
         if (!$conn = new Sqlite3($dbname)) { 
-            throw new DbConnectException("Unable to connect to SQLite database using supplied information.  Please double check credentials, and try again.");
+            if ($this->onconnect_fail !== null && is_callable($this->onconnect_fail)) { 
+                call_user_func($this->onconnect_fail);
+            }
+            throw new DbConnectException("Unable to connect to database using supplied information.  Error: " . $conn?->lastErrorMsg());
         }
 
         // Return
@@ -122,39 +128,39 @@ class SQLite extends AbstractSQL implements DbInterface
     /**
      * Insert record into database
      */
-    public function insert(...$args):void
+    public function insert(string $table_name, ...$args):void
     {
-        $this->insertDo($this, ...$args);
+        $this->insertDo($this, $table_name, ...$args);
     }
 
     /**
      Insert or update on duplicate key
      */
-    public function insertOrUpdate(...$args):void
+    public function insertOrUpdate(string $table_name, ...$args):void
     { 
-        $this->insertOrUpdateDo($this, ...$args);
+        $this->insertOrUpdateDo($this, $table_name, ...$args);
     }
 
     /**
      * Update database table
      */
-    public function update(...$args):void
+    public function update(string $table_name, array | object $updates, ...$args):void
     {
-        $this->updateDo($this, ...$args);
+        $this->updateDo($this, $table_name, $updates, ...$args);
     }
 
     /**
      * Delete rows
      */
-    public function delete(...$args):void
+    public function delete(string $table_name, string | object $where_clause, ...$args):void
     { 
-        $this->deleteDo($this, ...$args);
+        $this->deleteDo($this, $table_name, $where_clause, ...$args);
     }
 
     /**
      * Get single / first row
      */
-    public function getRow(...$args):array | object | null
+    public function getRow(string $sql, ...$args):?array
     { 
         return $this->getRowDo($this, ...$args);
     }
@@ -162,10 +168,9 @@ class SQLite extends AbstractSQL implements DbInterface
     /**
      * Get single row by id#
      */
-    public function getIdRow(...$args):array | object | null
+    public function getIdRow(string $table_name, string | int $id):?array
     {
-        $args[] = 'rowid'; 
-        return $this->getIdRowDo($this, ...$args);
+        return $this->getIdRowDo($this, $table_name, $id, 'rowid');
     }
 
     /**
@@ -203,16 +208,15 @@ class SQLite extends AbstractSQL implements DbInterface
     /**
      * Query SQL statement
      */
-    public function query(...$args):SqlQueryResult
+    public function query(string $sql, ...$args):SqlQueryResult
     { 
 
         // Get connection
-        $conn_type = preg_match("/^(select|show|describe) /i", $args[0]) ? 'read' : 'write';
+        $conn_type = $this->determineConnType($sql);
         $conn = $this->connect_mgr->getConnection($conn_type);
 
         //Format SQL
-    $map_class = class_exists($args[0]) ? array_shift($args) : '';
-        list($sql, $raw_sql, $values) = Format::stmt($conn, $args);
+        list($sql, $raw_sql, $values) = Format::stmt($conn, $sql, $args);
 
         // Add debug item, if available
         $this->debugger?->addItem('sql', $raw_sql, 3);
@@ -237,7 +241,7 @@ class SQLite extends AbstractSQL implements DbInterface
         }
 
         // Return
-    return new SqlQueryResult($this, $result, $map_class);
+        return new SqlQueryResult($this, $result);
     }
 
     /**
@@ -369,7 +373,7 @@ class SQLite extends AbstractSQL implements DbInterface
     /**
      * Begin transaction
      */
-    public function beginTransaction():void { } 
+    public function beginTransaction(bool $force_write = false):void { } 
     public function commit():void { }
     public function rollback():void { }
 

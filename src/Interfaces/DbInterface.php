@@ -34,32 +34,32 @@ interface DbInterface
     /**
      * Insert record into database
      */
-    public function insert(...$args):void;
+    public function insert(string $table_name, ...$args):void;
 
     /**
      Insert or update on duplicate key
      */
-    public function insertOrUpdate(...$args):void;
+    public function insertOrUpdate(string $table_name, ...$args):void;
 
     /**
      * Update database table
      */
-    public function update(...$args):void;
+    public function update(string $table_name, array | object $updates, ...$args):void;
 
     /**
      * Delete rows
      */
-    public function delete(...$args):void;
+    public function delete(string $table_name, string | object $where_clause, ...$args):void;
 
     /**
      * Get single / first row
      */
-    public function getRow(...$args):array | object | null;
+    public function getRow(string $sql, ...$args):?array;
 
     /**
      * Get single row by id#
      */
-    public function getIdRow($table_name, $id_number):array | object | null;
+    public function getIdRow(string $table_name, string | int $id):?array;
 
     /**
      * Get single column
@@ -85,7 +85,7 @@ interface DbInterface
     /**
      * Query SQL statement
      */
-    public function query(...$args):SqlQueryResult;
+    public function query(string $sql, ...$args):SqlQueryResult;
 
 
     /**
@@ -133,7 +133,7 @@ interface DbInterface
     /**
      * Begin transaction
      */
-    public function beginTransaction():void;
+    public function beginTransaction(bool $force_write = false):void;
 
 
     /**
@@ -151,6 +151,12 @@ interface DbInterface
      * Execute SQL file
      */
     public function executeSqlFile(string $filename):void;
+
+    /**
+     * Force write connection on next query.
+     */
+    public function forceWrite(bool $always = false):void;
+
 
 }
 

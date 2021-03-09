@@ -14,6 +14,21 @@ port | int | The database port.  Defaults to 3306 for mySQL, and 5432 for Postgr
 The constructor of each driver accepts two sets of connection parameters, the primary connection, and an optional read-only connection.  If the read-only connection is defined, it will be used as the default connection for all SQL queries until a write query (insert, update, delete) is executed, at which time it will automatically switch to the primary write connection.
 
 
+## Constructor Parameters
+
+The constructor of all database drivers accept the following parameters:
+
+Variable | Type | Description
+------------- |------------- |------------- 
+`$params` | array | The primary set of connection parameters, as explained above.  Required unless you're utilizing redis storage of connection information.
+`$readonly_params` | array | Optional read-only connection parameters.
+`$redis` | redis | Optional redis instance if utilizing redis storage of connection information.  See [Using redis and the Connection Manager](connect_mgr.md) for details.
+`$debugger` | DebuggerInterface | Optional debugger instance, if you're utilzing debugging features.  See [Utilizing Apex Debugger](debugger.md) for details.
+`$onconnect_fail` | callable | Optional callback, which if defined will be called upon connection failure.
+`$charset` | string | The charset to use, defaults to 'latin1'.
+`$tz_offset` | string | The timezone offset to use, defaults to UTC.
+
+
 ## mySQL Example
 
 ~~~php

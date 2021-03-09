@@ -1,6 +1,7 @@
 <?php
 declare(strict_types = 1);
 
+use Apex\Db\Mapper\ToInstance;
 use Apex\Db\Test\UserModel;
 use PHPUnit\Framework\TestCase;
 
@@ -41,7 +42,8 @@ class object_mapping_test extends TestCase
         $this->assertCount(1, $rows);
 
         // Get single user
-        $user = $db->getRow(UserModel::class, "SELECT * FROM test_users WHERE username = 'jsmith'");
+        $row = $db->getRow("SELECT * FROM test_users WHERE username = 'jsmith'");
+        $user = ToInstance::map(UserModel::class, $row);
         $this->assertIsObject($user);
         $this->assertEquals('jsmith', $user->getUsername());
         $this->assertEquals('John Smith', $user->getFullName());
@@ -71,7 +73,8 @@ class object_mapping_test extends TestCase
         $this->assertEquals('jsmith', $hash['1']);
 
         // Get single user
-        $user = $db->getRow(UserModel::class, "SELECT * FROM test_users WHERE username = 'jsmith'");
+        $row = $db->getRow("SELECT * FROM test_users WHERE username = 'jsmith'");
+        $user = ToInstance::map(UserModel::class, $row);
         $this->assertIsObject($user);
         $this->assertEquals('jsmith', $user->getUsername());
         $this->assertEquals('John Smith', $user->getFullName());
@@ -79,7 +82,8 @@ class object_mapping_test extends TestCase
         // Update user
         $user->setEmail('new.email@domain.com');
         $db->update('test_users', $user);
-        $user = $db->getRow(UserModel::class, "SELECT * FROM test_users WHERE username = 'jsmith'");
+        $row = $db->getRow("SELECT * FROM test_users WHERE username = 'jsmith'");
+        $user = ToInstance::map(UserModel::class, $row);
         $this->assertIsObject($user);
         $this->assertEquals('jsmith', $user->getUsername());
         $this->assertEquals('new.email@domain.com', $user->getEmail());
@@ -91,8 +95,9 @@ class object_mapping_test extends TestCase
         // Delete
         $count = 0;
         $db->delete('test_users', $user);
-        $users = $db->query(UserModel::class, "SELECT * FROM test_users");
-        foreach ($users as $user) { 
+        $rows = $db->query("SELECT * FROM test_users");
+        foreach ($rows as $row) { 
+            $user = ToInstance::map(UserModel::class, $row);
             $this->assertIsObject($user);
             $this->assertNotEquals('jsmith', $user->getUsername());
             $count++;
@@ -105,7 +110,8 @@ class object_mapping_test extends TestCase
             $db->insertOrUpdate('test_users', $user);
 
             // Check kim
-            $user = $db->getIdRow(UserModel::class, 'test_users', 7);
+            $row = $db->getIdRow('test_users', 7);
+            $user = ToInstance::map(UserModel::class, $row);
             $this->assertIsObject($user);
             $this->assertEquals('kim', $user->getUsername());
             $this->assertEquals('kim@domain.com', $user->getEmail());

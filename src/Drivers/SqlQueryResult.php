@@ -23,8 +23,7 @@ class SqlQueryResult implements \Iterator
      */
     public function __construct(
         private DbInterface $db, 
-        private $result,
-        private string $map_class = ''
+        private $result
     ) { 
         $this->total = $db->numRows($result);
     }
@@ -83,11 +82,6 @@ class SqlQueryResult implements \Iterator
         // Get row
         if (!$row = $this->db->fetchAssoc($this, $this->position)) { 
             return null;
-        }
-
-        // Map to object, if needed
-        if ($this->map_class != '' && class_exists($this->map_class)) { 
-            $row = ToInstance::map($this->map_class, $row);
         }
 
         // Return

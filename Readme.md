@@ -1,9 +1,9 @@
 
 # ADL - Apex Database Layer
 
-A lightweight database layer designed for simplicity and ease of use, providing a middle ground between larger ORMs and base PHP functions (ie. mysqli_*).  Supports multiple database engines including flat file databases, object mapping, connection load balancing, and an optional wrapper allowing methods to be accessed statically.  It supports:
+A lightweight database layer designed for simplicity and ease of use, providing a middle ground between larger ORMs and base PHP functions (ie. mysqli_*).  Supports multiple database engines, object mapping, connection load balancing, and an optional wrapper allowing methods to be accessed statically.  It supports:
 
-* Supports mySQL, PostgreSQL, SQLite, plus flat file JSON databases via SleekDB, and flat file CSV databases via the league/csv package.
+* Supports mySQL, PostgreSQL, and SQLite with ability to easily implement other engines.
 * Automated mapping to / from objects.
 * Automated preparing of ALL sql queries to protect against SQL injection.
 * Typed, sequential and named placeholders
@@ -23,15 +23,14 @@ Install via Composer with:
 
 ## Table of Contents
 
-1. [SQL Databases (Methods)](https://github.com/apexpl/db/blob/master/docs/sql.md)
+1. [SQL Database Methods](https://github.com/apexpl/db/blob/master/docs/sql.md)
     1. [Database Connections](https://github.com/apexpl/db/blob/master/docs/connections.md)
     2. [Placeholders](https://github.com/apexpl/db/blob/master/docs/placeholders.md)
     3. [Object Mapping](https://github.com/apexpl/db/blob/master/docs/object_mapping.md)
-    4. [Using redis and the Connection Manager](https://github.com/apexpl/db/blob/master/docs/connect_mgr.md)
-    5. [Utilizing Apex Debugger](https://github.com/apexpl/db/blob/master/docs/debugger.md)
-    6. [SQL Parser for Large SQL Files](https://github.com/apexpl/db/blob/master/docs/sql_parser.md)
-2. [Flat File Databases](https://github.com/apexpl/db/blob/master/docs/flatfile.md)
-3. [Db Wrapper for Statically Accessing Methods](https://github.com/apexpl/db/blob/master/docs/static_wrapper.md) 
+    4. [SQL Parser for Large SQL Files](https://github.com/apexpl/db/blob/master/docs/sql_parser.md)
+2. [Using redis and the Connection Manager](https://github.com/apexpl/db/blob/master/docs/connect_mgr.md)
+3. [Utilizing Apex Debugger](https://github.com/apexpl/db/blob/master/docs/debugger.md)
+4. [Db Wrapper for Statically Accessing Methods](https://github.com/apexpl/db/blob/master/docs/static_wrapper.md) 
 
 
 ## Basic Usage
@@ -40,7 +39,7 @@ Install via Composer with:
 use Apex\Db\Drivers\mySQL\mySQL;
 
 $db = new mySQL([
-    'dbname' =<' mydb', 
+    'dbname' => 'mydb', 
     'user' => 'myuser', 
     'password' => 'mydb_password'
 ]);
@@ -75,10 +74,11 @@ foreach ($rows as $row) {
 
 ## Object Mapping
 
-Allows mapping to and from objects by simply passing the class name as the first argument to various retrieve methods, and passing the object into insert / update methods.  For example:
+Allows mapping to and from objects with ease by simply passing the objects to write methods, and one static call to map results to an object.  For example:
 
 ~~~php
 use Apex\Db\Drivers\mySQL\mySQL;
+use Apex\Db\Mapper\ToInstance;
 use MyApp\Models\UserModel;
 
 $db = new mySQL([
@@ -88,14 +88,16 @@ $db = new mySQL([
 ]);
 
 // Get users
-$users = $db->query(UserModel::class, "SELECT * FROM users WHERE group_id = 2");
-foreach ($users as $user) { 
+$rows = $db->"SELECT * FROM users WHERE group_id = 2");
+foreach ($rows as $row) {
+    $user = ToInstance::map(UserModel::class, $row);
     // $user is a UserModel object, injected and instantiated
 }
 
 // Get specific user
 $userid = 5811;
-$user = $db->getIdRow(UserModel::class, 'users', $userid);    /// $user  is a UserModel object
+$row = $db->getIdRow('users', $userid);    /// $user  is a UserModel object
+$user = ToInstance::map(UserModel::class, $row);
 
 // Insert new user
 $user = new UserModel($my, $constructor, $params);
@@ -104,13 +106,6 @@ $db->insert('users', $user);
 // Unsure if inserting or updating?  No problem.
 $db->insertOrUpdate('users', $user);
 ~~~
-
-
-## Credits
-
-* The folks at [SleekDB](https://sleekdb.github.io/) whose package is used to provide support for flat file JSON databases.
-* Ignace Nyamagana Butera who's on Twitter [@nyamsprod](https://twitter.com/nyamsprod), as his league/csv package is used to provide support for flat file CSV databases.
-* Principe Orazio (orazio.principe@gmail.com) for development of the /src/Drivers/SqlParser.php class, which is included in this package and an excellent class to parse large SQL files.
 
 
 ## Follow Apex

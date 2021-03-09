@@ -49,11 +49,12 @@ class Format
     /**
      * Format SQL statement
      */
-    public static function stmt($conn, $args)
+    public static function stmt($conn, string $sql, $args)
     { 
 
         // Initialize
-        list($values, $bind_params, $raw_sql) = array([], '', $args[0]);
+        list($values, $bind_params, $raw_sql) = array([], '', $sql);
+        array_unshift($args, $sql);
 
         // Go through args
         $x=1;

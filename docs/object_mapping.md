@@ -1,21 +1,16 @@
 
 # Object Mapping
 
-ADL fully supports easy mapping to and from objects for both, retrieving records from the database, and inserting / updating / deleting  records.  There is no entity mapping per-se, and instead you simply pass the desired class name when retrieving records, while the insert / update / delete methods will accept any object.
+ADL fully supports easy mapping to and from objects for both, retrieving records from the database, and inserting / updating / deleting  records.  There is no entity mapping per-se, and instead you simply call one static method to map database records to an object, while the insert / update / delete methods will accept any object.
 
 
 ## Retrieving Objects as Records
 
-To retrieve objects instead of arrays when retrieving records, you may optionally pass a full class name as the first argument to the following methods:
-
-* [getIdRow()](./sql/getIdRow.md)
-* [getRow()](./docs/getRow.md)
-* [query()](./sql/query.md)
-
-If you call any of the above methods with a full class name as the first argument, objects of that class fully instantiated and injected with the values of the records will be returned instead of arrays.  For example:
+You may map records retrived from the database into objects by simply calling the `ToInstance::map()` method, for example:
 
 ~~~php
 use Apex\Db\Drivers\mySQL\mySQL;
+use Apex\Db\Mapper\ToInstance;
 use MyApp\Models\UserModel;
 
 $db = new mySQL([
@@ -26,17 +21,22 @@ $db = new mySQL([
 
 // Get all users
 $group_id = 2;
-$users = $db->query(userModel::class, "SELECT * FROM users WHERE group_id = %i", $group_id);
-foreach ($users as $user) { 
-    // $user is a UserModel object instance, instantiated and injected
+$rows = $db->query("SELECT * FROM users WHERE group_id = %i", $group_id);
+foreach ($rows as $row) {
+
+    // Map row to object
+    $user = ToInstance::map(userModel::class, $row);  // $user is a UserModel object instance, instantiated and injected
+
 }
 
 // Get single by id#
-$user = $db->getIdRow(USERModel::class, 'users', 5811);  // $user is a UserModel object of the user id# 5811
+$row = $db->getIdRow('users', 5811);  // $user is a UserModel object of the user id# 5811
+$user = ToInstance::map(USERModel::class, $row);
 
 // Get single row
 $username = 'johndoe';
-$user = $db->getRow(userModel::class, "SELECT * FROM users WHERE username = %s", $username);
+$row = $db->getRow("SELECT * FROM users WHERE username = %s", $username);
+$user = ToInstance::map(userModel::class, $row);
 ~~~
 
 

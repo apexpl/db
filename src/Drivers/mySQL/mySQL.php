@@ -27,9 +27,12 @@ class mySQL extends AbstractSQL implements DbInterface
      */
     public function __construct(
         array $params = [], 
-        array $readonly_params = [], 
-        ?redis $redis = null, 
-        private ?DebuggerInterface $debugger = null
+        array $readonly_params = [],
+        ?redis $redis = null,  
+        private ?DebuggerInterface $debugger = null, 
+        private $onconnect_fail = null,
+        private string $charset = 'latin1',  
+        private string $tz_offset = '+0:00'
     ) {
 
         // Set formatter
@@ -58,12 +61,22 @@ class mySQL extends AbstractSQL implements DbInterface
     { 
 
         // Connect
-        if (!$conn = @mysqli_connect($host, $user, $password, $dbname, $port)) { 
-            throw new DbConnectException("Unable to connect to mySQL database using supplied information.  Please double check credentials, and try again.");
+        if (!$conn = mysqli_connect($host, $user, $password, $dbname, $port)) { 
+            if ($this->onconnect_fail !== null && is_callable($this->onconnect_fail)) { 
+                call_user_func($this->onconnect_fail);
+            }
+            throw new DbConnectException("Unable to connect to database using supplied information.  Error: " . mysqli_error($conn));
+        }
+
+        // Set charset
+        if (!mysqli_set_charset($conn, $this->charset)) { 
+            throw new DbConnectException("Unable to set charset to $this->charset, error: " . mysqli_error($conn));
         }
 
         // Set timezone to UTC
-        mysqli_query($conn, "SET TIME_ZONE = '+0:00'");
+        if (!mysqli_query($conn, "SET TIME_ZONE = '$this->tz_offset'")) { 
+            throw new DbConnectException("Unable to set timezone offset to $this->tz_offset, error: " . mysqli_error($conn));
+        }
 
         // Return
         return $conn;
@@ -124,49 +137,49 @@ class mySQL extends AbstractSQL implements DbInterface
     /**
      * Insert record into database
      */
-    public function insert(...$args):void
+    public function insert(string $table_name, ...$args):void
     {
-        $this->insertDo($this, ...$args);
+        $this->insertDo($this, $table_name, ...$args);
     }
 
     /**
      Insert or update on duplicate key
      */
-    public function insertOrUpdate(...$args):void
+    public function insertOrUpdate(string $table_name, ...$args):void
     { 
-        $this->insertOrUpdateDo($this, ...$args);
+        $this->insertOrUpdateDo($this, $table_name, ...$args);
     }
 
     /**
      * Update database table
      */
-    public function update(...$args):void
+    public function update(string $table_name, array | object $updates, ...$args):void
     {
-        $this->updateDo($this, ...$args);
+        $this->updateDo($this, $table_name, $updates, ...$args);
     }
 
     /**
      * Delete rows
      */
-    public function delete(...$args):void
+    public function delete(string $table_name, string | object $where_clause, ...$args):void
     { 
-        $this->deleteDo($this, ...$args);
+        $this->deleteDo($this, $table_name, $where_clause, ...$args);
     }
 
     /**
      * Get single / first row
      */
-    public function getRow(...$args):array | object | null
+    public function getRow(string $sql, ...$args):?array
     { 
-        return $this->getRowDo($this, ...$args);
+        return $this->getRowDo($this, $sql, ...$args);
     }
 
     /**
      * Get single row by id#
      */
-    public function getIdRow(...$args):array | object | null
+    public function getIdRow(string $table_name, string | int $id):?array
     { 
-        return $this->getIdRowDo($this, ...$args);
+        return $this->getIdRowDo($this, $table_name, $id);
     }
 
     /**
@@ -204,16 +217,15 @@ class mySQL extends AbstractSQL implements DbInterface
     /**
      * Query SQL statement
      */
-    public function query(...$args):SqlQueryResult
+    public function query(string $sql, ...$args):SqlQueryResult
     { 
 
         // Get connection
-        $conn_type = preg_match("/^(select|show|describe) /i", $args[0]) ? 'read' : 'write';
+        $conn_type = $this->determineConnType($sql);
         $conn = $this->connect_mgr->getConnection($conn_type);
 
         //Format SQL
-    $map_class = class_exists($args[0]) ? array_shift($args) : '';
-        list($sql, $raw_sql, $bind_params, $values) = Format::stmt($conn, $args);
+        list($sql, $raw_sql, $bind_params, $values) = Format::stmt($conn, $sql, $args);
 
         // Add debug item, if available
         $this->debugger?->addItem('sql', $raw_sql, 3);
@@ -236,7 +248,7 @@ class mySQL extends AbstractSQL implements DbInterface
         $result = mysqli_stmt_get_result($this->prepared[$hash]);
 
         // Return
-    return new SqlQueryResult($this, $result, $map_class);
+        return new SqlQueryResult($this, $result);
     }
 
     /**
@@ -356,7 +368,7 @@ class mySQL extends AbstractSQL implements DbInterface
     /**
      * Begin transaction
      */
-    public function beginTransaction():void
+    public function beginTransaction(bool $force_write = false):void
     {
 
         // Get connection
@@ -366,6 +378,9 @@ class mySQL extends AbstractSQL implements DbInterface
         if (!mysqli_begin_transaction($conn)) { 
             throw new DbBeginTransactionException("Unable to begin database transaction, error: " . mysqli_error($conn));
         }
+
+        // Set force write
+        $this->force_write_transaction = $force_write;
 
     }
 
@@ -382,6 +397,7 @@ class mySQL extends AbstractSQL implements DbInterface
         if (!mysqli_commit($conn)) { 
             throw new DbCommitException("Unable to commit database transaction, error: " . mysqli_error($onn));
         }
+        $this->force_write_transaction = false;
 
     }
 
@@ -398,6 +414,7 @@ class mySQL extends AbstractSQL implements DbInterface
         if (!mysqli_rollback($conn)) { 
             throw new DbRollbackException("Unable to rollback database transaction, error: " . mysqli_error($conn));
         }
+        $this->force_write_transaction = false;
 
     }
 

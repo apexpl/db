@@ -20,6 +20,11 @@ class AbstractSQL
     protected array $tables = [];
     protected array $columns = [];
 
+        // Force write properties
+        protected bool $force_write = false;
+        protected bool $force_write_transaction = false;
+        protected bool $force_write_always = false;
+
 
     /**
      * Set formatter
@@ -213,19 +218,11 @@ class AbstractSQL
     protected function getRowDo(DbInterface $db, ...$args):array | object | null
     { 
 
-        // Check for map class
-        $map_class = class_exists($args[0]) ? array_shift($args) : '';
-
         // Get first row
         $result = $db->query(...$args);
         if (!$row = $db->fetchAssoc($result)) { 
             return null;
         }
-
-        // Map to object, if needed
-    if ($map_class != '' && class_exists($map_class)) { 
-            $row = ToInstance::map($map_class, $row);
-        } 
 
         // Return
         return $row;
@@ -234,11 +231,10 @@ class AbstractSQL
     /**
      * Get single row by id#
      */
-    protected function getIdRowDo(DbInterface $db, ...$args):array | object | null
+    protected function getIdRowDo(DbInterface $db, ...$args):?array
     { 
 
-        // Check for map class
-        $map_class = class_exists($args[0]) ? array_shift($args) : '';
+        // Initialize
         list($table_name, $id) = [$args[0], $args[1]];
         $id_col = $args[2] ?? 'id';
 
@@ -250,11 +246,6 @@ class AbstractSQL
         // Get first row
         if (!$row = $db->getRow("SELECT * FROM $table_name WHERE $id_col = %s ORDER BY id LIMIT 1", $id)) { 
             return null;
-        }
-
-        // Map to class, if needed
-        if ($map_class != '') { 
-            $row = ToInstance::map($map_class, $row);
         }
 
         // Return
@@ -322,6 +313,41 @@ class AbstractSQL
         foreach ($sql_lines as $sql) { 
             $db->query($sql);
         }
+    }
+
+    /**
+     * Force write connection on next query.
+     */
+    public function forceWrite(bool $always = false):void
+    {
+        $this->first_write_next = true;
+        $this->force_write_always = $always;
+    }
+
+    /**
+     * Determine connection type for SQL query.
+     *
+     * @return string - Either 'read' or 'write'
+     */
+    protected function determineConnType(string $sql):string
+    {
+
+        // Check force write properties
+        if ($this->force_write === true || $this->force_write_always === true || $this->force_write_transaction === true) { 
+            $conn_type = 'write';
+            if ($this->force_write_always === false && $this->force_write_transaction === false) { 
+                $this->force_write_next = false;
+            }
+
+        // Check for read statement
+        } elseif (preg_match("/^(select|show|describe) /i", $sql)) { 
+            $conn_type = 'read';
+        } else { 
+            $conn_type = 'write';
+        }
+
+        // Return
+        return $conn_type;
     }
 
 }

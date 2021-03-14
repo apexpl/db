@@ -81,8 +81,8 @@ class Format
             $values[] = $col_type == 'ls' ? '%' . $value . '%' : $value;
 
             // Replace placeholder in SQL
-            $args[0] = preg_replace("/" . preg_quote($match[0]) . "/", "\\\$" . ($x-1), $args[0], 1);
-            $raw_sql = preg_replace("/" . preg_quote($match[0]) . "/", "'" . pg_escape_string($value) . "'", $raw_sql, 1);
+            $args[0] = preg_replace("/" . preg_quote($match[0]) . "/", '?', $args[0], 1);
+            $raw_sql = preg_replace("/" . preg_quote($match[0]) . "/", "'" . $value . "'", $raw_sql, 1);
         }
 
         // Return

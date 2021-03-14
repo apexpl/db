@@ -53,7 +53,7 @@ class Format
     { 
 
         // Initialize
-        list($values, $bind_params, $raw_sql) = array([], '', $sql);
+        list($values, $raw_sql) = array([], $sql);
         array_unshift($args, $sql);
 
         // Go through args
@@ -75,18 +75,15 @@ class Format
             if (($value = self::checkValue($col_type, $value)) === null) {  
                 throw new DbInvalidArgumentException("Invalid SQL argument, expecting a " . (self::$data_types[$col_type] ?? $col_type) . " and received '$value' instead within SQL statement, $raw_sql");
             }
-
-            // Add to bind params, and values
-            $bind_params .= self::getBindParam($col_type);
             $values[] = $col_type == 'ls' ? '%' . $value . '%' : $value;
 
             // Replace placeholder in SQL
             $args[0] = preg_replace("/" . preg_quote($match[0]) . "/", '?', $args[0], 1);
-            $raw_sql = preg_replace("/" . preg_quote($match[0]) . "/", "'" . mysqli_real_escape_string($conn, $value) . "'", $raw_sql, 1);
+            $raw_sql = preg_replace("/" . preg_quote($match[0]) . "/", "'" . $value . "'", $raw_sql, 1);
         }
 
         // Return
-        return array($args[0], $raw_sql, $bind_params, $values);
+        return array($args[0], $raw_sql, $values);
     }
 
     /**

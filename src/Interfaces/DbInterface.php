@@ -4,6 +4,7 @@ namespace Apex\Db\Interfaces;
 
 use Apex\Db\Drivers\SqlQueryResult;
 
+
 /**
  * Database interface
  */
@@ -13,7 +14,7 @@ interface DbInterface
     /**
      * Connect to database
      *
-    public function connect(string $dbname, string $dbuser, string $dbpass, string $dbhost, int $dbport);
+    public function connect(string $dbname, string $dbuser, string $dbpass, string $dbhost, int $dbport):PDO;
 
     /**
      * Get table names
@@ -59,23 +60,23 @@ interface DbInterface
     /**
      * Get single row by id#
      */
-    public function getIdRow(string $table_name, string | int $id):?array;
+    public function getIdRow(string $table_name, string | int $id, string $idcol = 'id'):?array;
 
     /**
      * Get single column
      */
-    public function getColumn(...$args):array;
+    public function getColumn(string $sql, ...$args):array;
 
     /**
      * Get two column hash 
      */
-    public function getHash(...$args):array;
+    public function getHash(string $sql, ...$args):array;
 
 
     /**
      * Get single field / value
      */
-    public function getField(...$args):mixed;
+    public function getField(string $sql, ...$args):mixed;
 
     /**
      * Eval
@@ -85,25 +86,35 @@ interface DbInterface
     /**
      * Query SQL statement
      */
-    public function query(string $sql, ...$args):SqlQueryResult;
+    public function query(string $sql, ...$args):\PDOStatement;
 
 
     /**
      * Fetch array
      */
-    public function fetchArray(SqlQueryResult $result, int $position = null):?array;
+    public function fetchArray(\PDOStatement $stmt, int $position = null):?array;
 
 
     /**
      * Fetch assoc
      */
-    public function fetchAssoc(SqlQueryResult $result, int $position = null):?array;
+    public function fetchAssoc(\PDOStatement $stmt, int $position = null):?array;
+
+    /**
+     * Fetch object
+     */
+    public function fetchObject(\PDOStatement $stmt, string $class_name, int $position = null):?object;
 
 
     /**
      * Number of rows affected
      */
-    public function numRows($result):int;
+    public function numRows(\PDOStatement $stmt):int;
+
+    /**
+     * Get number of rows in select result
+     */
+    public function getSelectCount(\PDOStatement $stmt):int;
 
 
     /**

@@ -3,14 +3,13 @@
 
 **Description:** Get the single record identified by the unique id#.
 
-> `array | object | null $db->getIdRow([string $map_class], string $table_name, string $id_number)`
+> `array $db->getIdRow(string $table_name, string $id_number)`
 
 
 **Parameters**
 
 Param | Required | Type | Description
 ------------- |------------- |------------- |------------- 
-`$map_class` | No | string | Optional full class name, and if present the record returned from this query will be automatically mapped to an instance of this class.  See the [Object Mapping](../object_mapping.md) page for details.
 `$table_name` | Yes | string | The table name to retrieve record from.
 `$id_number` | Yes | string | The unique id# of the record to retrieve.  Must by the `id` column of the database table.
 
@@ -22,6 +21,7 @@ Param | Required | Type | Description
 
 ~~~php
 use Apex\Db\Drivers\mySQL\mySQL;
+use Apex\Db\Mapper\ToInstance;
 use MyApp\Models\UserModel;
 
 // Connect
@@ -40,9 +40,10 @@ echo "Username: " . $row['username'] . "\n";
 
 
 // Same query, but get an object this time
-if (!$user = $db->getIdRow(UserModel::class, 'users', $userid)) { 
+if (!$row = $db->getIdRow('users', $userid)) { 
     die("No user at the id# $userid");
 }
+$user = ToInstance::map(UserModel::class, $row);
 echo "Username: " . $user->getUsername() . "\n";
 ~~~
 

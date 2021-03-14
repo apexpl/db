@@ -1,12 +1,13 @@
 
 # ADL - Apex Database Layer
 
-A lightweight database layer designed for simplicity and ease of use, providing a middle ground between larger ORMs and base PHP functions (ie. mysqli_*).  Supports multiple database engines, object mapping, connection load balancing, and an optional wrapper allowing methods to be accessed statically.  It supports:
+A lightweight database layer designed for simplicity and ease of use, providing a middle ground between larger ORMs and base PHP functions (ie. mysqli_*).  Supports multiple database engines, object mapping, initialization wrappers for Doctrine and Eloquent, connection load balancing, and an optional wrapper allowing methods to be accessed statically.  It supports:
 
 * Supports mySQL, PostgreSQL, and SQLite with ability to easily implement other engines.
 * Automated mapping to / from objects.
 * Automated preparing of ALL sql queries to protect against SQL injection.
 * Typed, sequential and named placeholders
+* Initialization wrappers for Doctrine and Eloquent
 * Optional secondary read-only connection parameters, which automatically switch to write connection when necessary SQL query is executed.
 * Optional redis support with connection manager allowing both, easy maintainability of connection information across multiple server instances, and multiple read-only connections with automated load balancing via round robin.
 * Command line tool (and PHP class) to easily manage connection information within redis.
@@ -23,14 +24,25 @@ Install via Composer with:
 
 ## Table of Contents
 
-1. [SQL Database Methods](https://github.com/apexpl/db/blob/master/docs/sql.md)
-    1. [Database Connections](https://github.com/apexpl/db/blob/master/docs/connections.md)
-    2. [Placeholders](https://github.com/apexpl/db/blob/master/docs/placeholders.md)
-    3. [Object Mapping](https://github.com/apexpl/db/blob/master/docs/object_mapping.md)
-    4. [SQL Parser for Large SQL Files](https://github.com/apexpl/db/blob/master/docs/sql_parser.md)
-2. [Using redis and the Connection Manager](https://github.com/apexpl/db/blob/master/docs/connect_mgr.md)
-3. [Utilizing Apex Debugger](https://github.com/apexpl/db/blob/master/docs/debugger.md)
-4. [Db Wrapper for Statically Accessing Methods](https://github.com/apexpl/db/blob/master/docs/static_wrapper.md) 
+1. [Database Connections](https://github.com/apexpl/db/blob/master/docs/connections.md)
+2. [SQL Database Methods (26 methods)](https://github.com/apexpl/db/blob/master/docs/sql.md)
+    1. [insert()](https://github.com/apexpl/db/blob/master/docs/sql/insert.md)
+    2. [update()](https://github.com/apexpl/db/blob/master/docs/sql/update.md)
+    3. [insertOrUpdate()](https://github.com/apexpl/db/blob/master/docs/sql/insertOrUpdate.md)
+    4. [query()](https://github.com/apexpl/db/blob/master/docs/sql/query.md)
+    5. [getRow()](https://github.com/apexpl/db/blob/master/docs/sql/getRow.md)
+    6. [getIdRow()](https://github.com/apexpl/db/blob/master/docs/sql/getIdRow.md)
+    7. [getField()](https://github.com/apexpl/db/blob/master/docs/sql/getField.md)
+    8. [getColumn()](https://github.com/apexpl/db/blob/master/docs/sql/getColumn.md)
+    9. [getHash()](https://github.com/apexpl/db/blob/master/docs/sql/getHash.md)
+3. [Placeholders](https://github.com/apexpl/db/blob/master/docs/placeholders.md)
+4. [Object Mapping](https://github.com/apexpl/db/blob/master/docs/object_mapping.md)
+5. Additional / Supplemental
+    1. [SQL Parser for Large SQL Files](https://github.com/apexpl/db/blob/master/docs/sql_parser.md)
+    2. [Using redis and the Connection Manager](https://github.com/apexpl/db/blob/master/docs/connect_mgr.md)
+    3. [Utilizing Apex Debugger](https://github.com/apexpl/db/blob/master/docs/debugger.md)
+    4. [Db Wrapper for Statically Accessing Methods](https://github.com/apexpl/db/blob/master/docs/static_wrapper.md) 
+    5. [Initialization Wrappers for Doctrine, Eloquent, and PDO](https://github.com/apexpl/db/blob/master/docs/wrappers.md)
 
 
 ## Basic Usage

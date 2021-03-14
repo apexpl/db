@@ -3,10 +3,13 @@ declare(strict_types = 1);
 
 namespace Apex\Db\Drivers;
 
+use Apex\Db\Connections;
 use Apex\Db\Drivers\SqlParser;
 use Apex\Db\Mapper\{FromInstance, ToInstance};
 use Apex\Db\Interfaces\DbInterface;
-use Apex\Db\Exceptions\{DbTableNotExistsException, DbColumnNotExistsException, DbNoInsertDataException, DbObjectNotExistsException};
+use Apex\Debugger\Interfaces\DebuggerInterface;
+use Apex\Db\Exceptions\{DbTableNotExistsException, DbColumnNotExistsException, DbNoInsertDataException, DbObjectNotExistsException, DbPrepareException, DbQueryException, DbBeginTransactionException, DbCommitException, DbRollbackException};
+use PDO;
 
 
 /**
@@ -17,6 +20,12 @@ class AbstractSQL
 
     // Properties
     public $formatter;
+    public DbInterface $db;
+    public Connections $connect_mgr;
+    public ?DebuggerInterface $debugger;
+
+        // Array properties
+    protected array $prepared = [];
     protected array $tables = [];
     protected array $columns = [];
 
@@ -35,20 +44,80 @@ class AbstractSQL
     }
 
     /**
+     * Set debugger
+     */
+    protected function setDebugger(?DebuggerInterface $debugger):void
+    {
+        $this->debugger = $debugger;
+    }
+
+    /**
+     * Set db
+     */
+    protected function setDb(DbInterface $db):void
+    {
+        $this->db = $db;
+    }
+
+    /**
+     * Query SQL statement
+     */
+    public function query(string $sql, ...$args):\PDOStatement
+    { 
+
+        // Get connection
+        $conn_type = $this->determineConnType($sql);
+        $conn = $this->connect_mgr->getConnection($conn_type);
+
+        //Format SQL
+        list($sql, $raw_sql, $values) = $this->formatter::stmt($conn, $sql, $args);
+        $hash = 's' . crc32($sql);
+        $stmt = $this->prepared[$hash] ?? '';
+
+        // Add debug item, if available
+        $this->debugger?->addItem('sql', $raw_sql, 3);
+
+        // Prepare statement, if needed
+        if ($stmt == '') { 
+            $options = $conn_type == 'read' ? [PDO::ATTR_CURSOR => PDO::CURSOR_SCROLL] : [];
+            if (str_ends_with($this->db::class, 'SQLite')) { 
+                $options = [];
+            }
+
+            try {
+                $stmt = $conn->prepare($sql, $options);
+                $stmt->setFetchMode(PDO::FETCH_ASSOC);
+                $this->prepared[$hash] = $stmt;
+            } catch (\PDOException $e) { 
+                throw new DbPrepareException("Unable to prepare SQL statement, $sql with error: " . $e->getMessage());
+            }
+        }
+
+        // Execute SQL
+        try {
+            $stmt->execute($values);
+        } catch (\PDOException $e) {
+            throw new DbQueryException("Unable to execute SQL statement, $raw_sql <br /><br />Error: " . $e->getMessage());
+        }
+
+        // Return
+        return $stmt;
+    }
+
+    /**
      * Insert row(s)
      */
-    protected function insertDo(DbInterface $db, ...$args):void
+    public function insert(string $table_name, ...$args):void
     { 
 
         // Check if table exists
-        $table_name = array_shift($args);
-        if (!$db->checkTable($table_name)) { 
+        if (!$this->db->checkTable($table_name)) { 
             throw new DbTableNotExistsException("Unable to perform insert, as database table does not exist, $table_name");
         }
 
         // Set variables
         list($values, $placeholders) = array([], []);
-        $columns = $db->getColumnNames($table_name, true);
+        $columns = $this->db->getColumnNames($table_name, true);
 
         // Get sets of args, in case of multi-row insert
         $arg_sets = [];
@@ -70,16 +139,29 @@ class AbstractSQL
         }
 
         // Generate value sets
-        $value_sets = [];
+        list($has_id, $value_sets) = [false, []];
         foreach ($arg_sets as $set) { 
 
             // GO through key-value pairs
             $placeholders = [];
             foreach ($set as $column => $value) { 
+
+                if ($column == 'id' && (int) $value == 0) { 
+                    continue; 
+                } elseif ($column == 'id') { 
+                    $has_id = true;
+                }
+
+                // Add to value set
                 $placeholders[] = $this->formatter::getPlaceholder($columns[$column]);
                 $values[] = $value;
             }
             $value_sets[] = '(' . implode(", ", $placeholders) . ')';
+        }
+
+        // Remove id from insert columns, if needed
+        if ($has_id === false && $key = array_search('id', $insert_columns)) { 
+            array_splice($insert_columns, $key, 1);
         }
 
         // Finish SQL
@@ -87,28 +169,33 @@ class AbstractSQL
         $sql .= implode(', ', $value_sets);
 
         // Execute SQL
-        $db->query($sql, ...$values);
+        $this->db->query($sql, ...$values);
     }
 
     /**
      * Insert or update
      */
-    protected function insertOrUpdateDo(DbInterface $db, ...$args):void
+    public function insertOrUpdate(string $table_name, ...$args):void
     { 
 
         // Check if table exists
-        $table_name = array_shift($args);
-        if (!$db->checkTable($table_name)) { 
+        if (!$this->db->checkTable($table_name)) { 
             throw new DbTableNotExistsException("Unable to perform insert_or_update as table does not exist, $table_name");
         }
 
         // Set variables
         list($values, $placeholders, $update_values, $update_placeholders) = array([], [], [], []);
-        $columns = $db->getColumnNames($table_name, true);
+        $columns = $this->db->getColumnNames($table_name, true);
 
         // Map object, if needed
         if (is_object($args[0])) { 
             $args[0] = FromInstance::map($args[0], $columns);
+        }
+
+        // Check for id = 0, and insert
+        if (isset($args[0]['id']) && (int) $args[0]['id'] == 0) { 
+            $this->insert($table_name, $args[0]);
+            return;
         }
 
         // Generate SQL
@@ -126,30 +213,34 @@ class AbstractSQL
             $values[] = $value;
             $update_values[] = $value;
         }
-        $sql .= implode(", ", $placeholders) . ') ON DUPLICATE KEY UPDATE ' . implode(', ', $update_placeholders);
+
+        // Finish SQL
+        if (str_ends_with($this->db::class, 'PostgreSQL')) { 
+            $sql .= implode(", ", $placeholders) . ') ON CONFLICT (id) DO UPDATE SET ' . implode(', ', $update_placeholders);
+        } else { 
+            $sql .= implode(", ", $placeholders) . ') ON DUPLICATE KEY UPDATE ' . implode(', ', $update_placeholders);
+        }
 
         // Execute SQL
-        $db->query($sql, ...$values, ...$update_values);
+        $this->db->query($sql, ...$values, ...$update_values);
     }
 
     /**
      * Update
      */
-    protected function updateDo(DbInterface $db, ...$args):void
+    public function update(string $table_name, array | object $updates, ...$args):void
     { 
 
         // Check if table exists
-        $table_name = array_shift($args);
-        if (!$db->checkTable($table_name)) { 
+        if (!$this->db->checkTable($table_name)) { 
             throw new DbTableNotExistsException("Unable to perform update, as table does not exist, $table_name");
         }
 
         // Set variables
         list($values, $placeholders) = array([], []);
-        $columns = $db->getColumnNames($table_name, true);
+        $columns = $this->db->getColumnNames($table_name, true);
 
         // Map object, if needed
-        $updates = array_shift($args);
         if (is_object($updates)) { 
             $record_id = FromInstance::getObjectId($updates);
             $updates = FromInstance::map($updates, $columns);
@@ -177,50 +268,49 @@ class AbstractSQL
         }
 
         // Execute  SQL
-        $db->query($sql, ...$values, ...$args);
+        $this->db->query($sql, ...$values, ...$args);
     }
 
     /**
      * Delete
      */
-    protected function deleteDo(DbInterface $db, ...$args)
+    public function delete(string $table_name, string | object $where_clause, ...$args):void
     { 
 
         // Check if table exists
-        $table_name = array_shift($args);
-        if (!$db->checkTable($table_name)) { 
+        if (!$this->db->checkTable($table_name)) { 
             throw new DbTableNotExistsException("Unable to perform delete as table does not exist, $table_name");
         }
         $sql = "DELETE FROM $table_name";
 
         // Map from object, if needed
-        if (isset($args[0]) && is_object($args[0])) { 
+        if (is_object($where_clause)) { 
 
             // Get id# of object
-            if (!$id = FromInstance::getObjectId($args[0])) { 
+            if (!$id = FromInstance::getObjectId($where_clause)) { 
                 throw new DbObjectNotExistsException("Unable to perform delete, as no 'id' variable exists within the provided object.");
             }
             $sql .= " WHERE id = %i";
             $args = [$id];
 
         // String based where clause
-        } elseif (isset($args[0]) && $args[0] != '') { 
-            $sql .= ' WHERE ' . array_shift($args);
+        } elseif ($where_clause != '') { 
+            $sql .= " WHERE $where_clause";
         }
 
         // Execute SQL
-        $db->query($sql, ...$args);
+        $this->db->query($sql, ...$args);
     }
 
     /**
      * Get single / first row
      */
-    protected function getRowDo(DbInterface $db, ...$args):array | object | null
+    public function getRow(string $sql, ...$args):?array
     { 
 
         // Get first row
-        $result = $db->query(...$args);
-        if (!$row = $db->fetchAssoc($result)) { 
+        $result = $this->query($sql, ...$args);
+        if (!$row = $this->fetchAssoc($result)) { 
             return null;
         }
 
@@ -231,20 +321,16 @@ class AbstractSQL
     /**
      * Get single row by id#
      */
-    protected function getIdRowDo(DbInterface $db, ...$args):?array
+    public function getIdRow(string $table_name, string | int $id, string $id_col = 'id'):?array
     { 
 
-        // Initialize
-        list($table_name, $id) = [$args[0], $args[1]];
-        $id_col = $args[2] ?? 'id';
-
-        //Check table
-        if (!$db->checkTable($table_name)) { 
-            throw new DbTableNotExistsException("Unable to get row by id, as table does not exist, $table_name");
+        // Check if table exists
+        if (!$this->db->checkTable($table_name)) { 
+            throw new DbTableNotExistsException("Unable to perform insert, as database table does not exist, $table_name");
         }
 
         // Get first row
-        if (!$row = $db->getRow("SELECT * FROM $table_name WHERE $id_col = %s ORDER BY id LIMIT 1", $id)) { 
+        if (!$row = $this->getRow("SELECT * FROM $table_name WHERE $id_col = %s ORDER BY id LIMIT 1", $id)) { 
             return null;
         }
 
@@ -255,13 +341,13 @@ class AbstractSQL
     /**
      * Get single column
      */
-    protected function getColumnDo(DbInterface $db, ...$args):array
+    public function getColumn(string $sql, ...$args):array
     { 
 
         // Get column
         $cvalues = [];
-        $result = $db->query(...$args);
-        while ($row = $db->fetchArray($result)) { 
+        $result = $this->query($sql, ...$args);
+        while ($row = $this->fetchArray($result)) { 
             $cvalues[] = $row[0];
         }
 
@@ -272,13 +358,13 @@ class AbstractSQL
     /**
      * Get two column hash 
      */
-    protected function getHashDo(DbInterface $db, ...$args):array
+    public function getHash(string $sql, ...$args):array
     { 
 
         // Get hash
         $vars = [];
-        $result = $db->query(...$args);
-        while ($row = $db->fetchArray($result)) { 
+        $result = $this->query($sql, ...$args);
+        while ($row = $this->fetchArray($result)) { 
             $vars[$row[0]] = $row[1];
         }
 
@@ -289,12 +375,12 @@ class AbstractSQL
     /**
      * Get single field / value
      */
-    protected function getFieldDo(DbInterface $db, ...$args):mixed
+    public function getField(string $sql, ...$args):mixed
     { 
 
         // Execute SQL query
-        $result = $db->query(...$args);
-        if (!$row = $db->fetchArray($result)) { 
+        $result = $this->query($sql, ...$args);
+        if (!$row = $this->fetchArray($result)) { 
             return null;
         }
 
@@ -303,15 +389,158 @@ class AbstractSQL
     }
 
     /**
+     * Eval
+     */
+    public function eval(string $sql):mixed
+    {
+        return $this->get_field("SELECT $sql");
+    }
+
+    /**
+     * Fetch array
+     */
+    public function fetchArray(\PDOStatement $stmt, int $position = null):?array
+    { 
+
+        // Get row
+        if ($position === null) { 
+            $row = $stmt->fetch(PDO::FETCH_NUM, PDO::FETCH_ORI_NEXT);
+        } else { 
+            $row = $stmt->fetch(PDO::FETCH_NUM, PDO::FETCH_ORI_ABS, $position);
+        }
+
+        // Get row
+        if (!$row) { 
+            return null;
+        }
+
+        // Return
+        return $row;
+    }
+
+    /**
+     * Fetch assoc
+     */
+    public function fetchAssoc(\PDOStatement $stmt, int $position = null):?array
+    { 
+
+        // Get row
+        if ($position === null) { 
+            $row = $stmt->fetch(PDO::FETCH_ASSOC, PDO::FETCH_ORI_NEXT);
+        } else { 
+            $row = $stmt->fetch(PDO::FETCH_ASSOC, PDO::FETCH_ORI_ABS, $position);
+        }
+
+        // Get row
+        if (!$row) { 
+            return null;
+        }
+
+        // Return
+        return $row;
+    }
+
+    /**
+     * Fetch object
+     */
+    public function fetchObject(\PDOStatement $stmt, string $class_name, int $position = null):?object
+    {
+
+        // Get row
+        if (!$row = $this->db->fetchAssoc($stmt, $position)) { 
+            return null;
+        }
+
+        // Map to object, and return
+        return ToInstance($class_name, $row);
+    }
+
+    /**
+     * Number of rows affected
+     */
+    public function numRows(\PDOStatement $stmt):int
+    { 
+        return $stmt->rowCount();
+    }
+
+    /**
+     * Last insert id
+     */
+    public function insertId():?int
+    {
+        $conn = $this->connect_mgr->getConnection('write');
+        return (int) $conn->lastInsertId();
+    }
+
+    /**
+     * Begin transaction
+     */
+    public function beginTransaction(bool $force_write = false):void
+    {
+
+        // Get connection
+        $conn = $this->connect_mgr->getConnection('write');
+
+        // Begin transaction 
+        try {
+            $conn->beginTransaction();
+        } catch (\PDOException $e) { 
+            throw new DbBeginTransactionException("Unable to begin database transaction, error: " . $e->getMessage());
+        }
+
+        // Set force write
+        $this->force_write_transaction = $force_write;
+
+    }
+
+    /**
+     * Commit transaction 
+     */
+    public function commit():void
+    { 
+
+        // Get connection
+        $conn = $this->connect_mgr->getConnection('write');
+
+        // Commit transaction
+        try {
+            $conn->commit();
+        } catch (\PDOException $e) { 
+            throw new DbCommitException("Unable to commit database transaction, error: " . $e->getMessage());
+        }
+        $this->force_write_transaction = false;
+
+    }
+
+    /**
+     * Rollback transaction
+     */
+    public function rollback():void
+    { 
+
+        // Get connection
+        $conn = $this->connect_mgr->getConnection('write');
+
+        // Rollback transaction
+        try {
+            $conn->rollback();
+        } catch (\PDOException $e) { 
+            throw new DbRollbackException("Unable to rollback database transaction, error: " . $e->getMessage());
+        }
+        $this->force_write_transaction = false;
+
+    }
+
+    /**
      * Execute SQL file
      */
-    public function executeSqlFileDo(DbInterface $db, string $filename):void
+    public function executeSqlFile(string $filename):void
     {
 
         // Execute SQL file
         $sql_lines = SqlParser::parse(file_get_contents($filename));
         foreach ($sql_lines as $sql) { 
-            $db->query($sql);
+            $this->db->query($sql);
         }
     }
 
@@ -323,6 +552,25 @@ class AbstractSQL
         $this->first_write_next = true;
         $this->force_write_always = $always;
     }
+
+    /**
+     * Clear cache
+     */
+    public function clearCache()
+    {
+        $this->columns = [];
+        $this->tables = [];
+    }
+
+    /**
+     * Check if table exists
+     */
+    public function checkTable(string $table_name):bool
+    { 
+        $tables = $this->getTableNames();
+        return in_array($table_name, $tables);
+    }
+
 
     /**
      * Determine connection type for SQL query.

@@ -77,13 +77,12 @@ class Format
             }
 
             // Add to bind params, and values
-            $holder = ':v' . $x . 'v';
             if ($col_type == 'ls') { $value = '%' . $value . '%'; }
-            $values[$holder] = [$value, self::getBindParam($col_type)];
+            $values[] = $value;
 
             // Replace placeholder in SQL
-            $args[0] = preg_replace("/" . preg_quote($match[0]) . "/", $holder, $args[0], 1);
-            $raw_sql = preg_replace("/" . preg_quote($match[0]) . "/", "'" . $conn->escapeString($value) . "'", $raw_sql, 1);
+            $args[0] = preg_replace("/" . preg_quote($match[0]) . "/", '?', $args[0], 1);
+            $raw_sql = preg_replace("/" . preg_quote($match[0]) . "/", "'" . $value . "'", $raw_sql, 1);
         $x++; }
 
         // Return

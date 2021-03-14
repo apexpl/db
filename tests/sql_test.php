@@ -47,7 +47,8 @@ class sqltest extends TestCase
         $columns = $db->getColumnNames('test_users', true);
         $this->assertArrayHasKey('status', $columns);
         $this->assertArrayHasKey('name', $columns);
-        $this->assertEquals('varchar(100)', strtolower($columns['name']));
+        $col_type = $_SERVER['test_sql_driver'] == 'postgresql' ? 'character varying' : 'varchar(100)';
+        $this->assertEquals($col_type, strtolower($columns['name']));
 
         // Get column
         $names = $db->getColumn("SELECT name FROM test_users");
@@ -89,7 +90,7 @@ class sqltest extends TestCase
         // Delete
         $db->delete('test_users', "status = %s", 'pending');
         $rows = $db->query("SELECT * FROM test_users");
-        $this->assertCount(2, $rows);
+        $this->assertEquals(2, $db->getSelectCount($rows));
 
         // Drop table
         $db->query("DROP TABLE test_users");

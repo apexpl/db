@@ -1,9 +1,9 @@
 
-# numRows
+# getSelectCount
 
-**Description:** Get the number of affected rows from previous statement.
+**Description:** Get the total number of rows from a select statement.
 
-> `int $db->numRows(PDOStatement $result)`
+> `int $db->getSelectRows(PDOStatement $result)`
 
 
 **Parameters**
@@ -28,10 +28,10 @@ $db = new mySQL([
     'password' => 'mydb_password'
 ]);
 
-// Update users
-$result = $db->query("UPDATE users SET status = 'inactive' WHERE status = 'pending'");
+// Get users
+$rows = $db->query("SELECT * FROM users WHERE group_id = 2");
 
-$num = $db->numRows($result);
-echo "$num rows were updated\n";
+$num = $db->getSelectCount($result);
+echo "Total rows: $num\n";
 ~~~
 

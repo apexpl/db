@@ -1,17 +1,5 @@
 
-# SQL Databases
-
-ADL provides support for mySQL, PostgreSQL and SQLite databases, although additional drivers can be integrated rather easily.
-
-1. [Database Connections](connections.md)
-2. [Placeholders](placeholders.md)
-3. [Object Mapping](object_mapping.md)
-4. [Using redis and the Connection Manager](connect_mgr.md)
-5. [Utilizing Apex Debugger](debugger.md)
-6. [SQL Parser for Large SQL Files](sql_parser.md)
-
-
-## Available Methods
+# SQL Database Methods
 
 The following methods are available for all SQL drivers:
 
@@ -27,6 +15,7 @@ The following methods are available for all SQL drivers:
 * [executeSqlFile()](./sql/executeSqlFile.md)
 * [fetchArray()](./sql/fetchArray.md)
 * [fetchAssoc()](./sql/fetchAssoc.md)
+* [fetchObject()](./sql/fetchObject.md)
 * [forceWrite()](./sql/forceWrite.md)
 * [getColumn()](./sql/getColumn.md)
 * [getColumnNames()](./sql/getColumnNames.md)
@@ -34,6 +23,7 @@ The following methods are available for all SQL drivers:
 * [getHash()](./sql/getHash.md)
 * [getIdRow()](./sql/getIdRow.md)
 * [getRow()](./sql/getRow.md)
+* [getSelectCount()](./sql/getSelectCount.md)
 * [getTableNames()](./sql/getTableNames.md)
 * [insert()](./sql/insert.md)
 * [insertId()](./sql/insertId.md)

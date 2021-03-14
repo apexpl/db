@@ -3,14 +3,14 @@
 
 **Description:** Gets a single record from a result row as an array.
 
-> `array $db->fetchArray(SqlQueryResult $result, [int $position = null])`
+> `array $db->fetchArray(PDOStatement $stmt, [int $position = null])`
 
 
 **Parameters**
 
 Param | Required | Type | Description
 ------------- |------------- |------------- |------------- 
-`$result` | Yes | SqlQueryResult | The result returned by the [query()](query.md) method.
+`$stmt` | Yes | PDOStatement | The result returned by the [query()](query.md) method.
 `$position` | No | int | The position within the result set of which to retrieve the record.  Defaults to null, meaning the next record as you're traversing through them.
 
 

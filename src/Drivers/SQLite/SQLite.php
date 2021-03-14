@@ -4,13 +4,13 @@ declare(strict_types = 1);
 namespace Apex\Db\Drivers\SQLite;
 
 use Apex\Db\Connections;
-use Apex\Db\Drivers\{AbstractSQL, SqlQueryResult};
+use Apex\Db\Drivers\AbstractSQL;
 use Apex\Db\Drivers\SQLite\Format;
 use Apex\Db\Interfaces\DbInterface;
-use Apex\Db\Exceptions\{DbConnectException, DbPrepareException, DbBindParamsException, DbQueryException, DbBeginTransactionException, DbCommitException, DbRollbackException};
+use Apex\Db\Exceptions\{DbConnectException, DbInvalidArgumentException};
 use Apex\Debugger\Interfaces\DebuggerInterface;
-use Sqlite3;
 use redis;
+use PDO;
 
 
 /**
@@ -19,9 +19,6 @@ use redis;
 class SQLite extends AbstractSQL implements DbInterface
 {
 
-    // Properties
-    public Connections $connect_mgr;
-    private array $prepared = [];
 
     /**
      * Constructor
@@ -30,14 +27,16 @@ class SQLite extends AbstractSQL implements DbInterface
         array $params = [], 
         array $readonly_params = [],
         ?redis $redis = null,  
-        private ?DebuggerInterface $debugger = null, 
+        ?DebuggerInterface $debugger = null, 
         private $onconnect_fail = null,
-        private string $charset = 'latin1',  
+        private string $charset = 'utf8mb4',  
         private string $tz_offset = '+0:00'
     ) {
 
         // Set formatter
         $this->setFormatter(Format::class);
+        $this->setDebugger($debugger);
+        $this->setDb($this);
 
         // Validate params 
         if (count($params) > 0) { 
@@ -61,12 +60,18 @@ class SQLite extends AbstractSQL implements DbInterface
     public function connect(string $dbname = '', string $user = '', string $password = '', string $host = '', int $port = 0)
     { 
 
+        // Connection string
+        $dsn = 'sqlite:' . $dbname;
+
         // Connect
-        if (!$conn = new Sqlite3($dbname)) { 
+        try {
+            $conn = new PDO($dsn);
+            $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        } catch (\PDOException $e) {
             if ($this->onconnect_fail !== null && is_callable($this->onconnect_fail)) { 
                 call_user_func($this->onconnect_fail);
             }
-            throw new DbConnectException("Unable to connect to database using supplied information.  Error: " . $conn?->lastErrorMsg());
+            throw new DbConnectException("Unable to connect to database using supplied information.  Error: " . $e->getMessage());
         }
 
         // Return
@@ -116,157 +121,22 @@ class SQLite extends AbstractSQL implements DbInterface
         return $include_types === true ? $this->columns[$table_name] : array_keys($this->columns[$table_name]);
     }
 
-    /**
-     * Clear cache
-     */
-    public function clearCache()
-    {
-        $this->columns = [];
-        $this->tables = [];
-    }
-
-    /**
-     * Insert record into database
-     */
-    public function insert(string $table_name, ...$args):void
-    {
-        $this->insertDo($this, $table_name, ...$args);
-    }
-
-    /**
-     Insert or update on duplicate key
-     */
-    public function insertOrUpdate(string $table_name, ...$args):void
-    { 
-        $this->insertOrUpdateDo($this, $table_name, ...$args);
-    }
-
-    /**
-     * Update database table
-     */
-    public function update(string $table_name, array | object $updates, ...$args):void
-    {
-        $this->updateDo($this, $table_name, $updates, ...$args);
-    }
-
-    /**
-     * Delete rows
-     */
-    public function delete(string $table_name, string | object $where_clause, ...$args):void
-    { 
-        $this->deleteDo($this, $table_name, $where_clause, ...$args);
-    }
-
-    /**
-     * Get single / first row
-     */
-    public function getRow(string $sql, ...$args):?array
-    { 
-        return $this->getRowDo($this, ...$args);
-    }
-
-    /**
-     * Get single row by id#
-     */
-    public function getIdRow(string $table_name, string | int $id):?array
-    {
-        return $this->getIdRowDo($this, $table_name, $id, 'rowid');
-    }
-
-    /**
-     * Get single column
-     */
-    public function getColumn(...$args):array
-    { 
-        return $this->getColumnDo($this, ...$args);
-    }
-
-    /**
-     * Get two column hash 
-     */
-    public function getHash(...$args):array
-    { 
-        return $this->getHashDo($this, ...$args);
-    }
-
-    /**
-     * Get single field / value
-     */
-    public function getField(...$args):mixed
-    { 
-        return $this->getFieldDo($this, ...$args);
-    }
-
-    /**
-     * Eval
-     */
-    public function eval(string $sql):mixed
-    {
-        return $this->get_field("SELECT $sql");
-    }
-
-    /**
-     * Query SQL statement
-     */
-    public function query(string $sql, ...$args):SqlQueryResult
-    { 
-
-        // Get connection
-        $conn_type = $this->determineConnType($sql);
-        $conn = $this->connect_mgr->getConnection($conn_type);
-
-        //Format SQL
-        list($sql, $raw_sql, $values) = Format::stmt($conn, $sql, $args);
-
-        // Add debug item, if available
-        $this->debugger?->addItem('sql', $raw_sql, 3);
-
-        // Prepare SQL statement, if needed
-        $hash = crc32($sql);
-        if ((!isset($this->prepared[$hash])) && (!$this->prepared[$hash] = $conn->prepare($sql))) { 
-            throw new DbPrepareException("Unable to prepare SQL statement, $sql with error: " . $conn->lastErrorMsg());
-        }
-        $stmt =& $this->prepared[$hash];
-
-        // Bind params
-        foreach ($values as $param => $vars) { 
-            if (!$stmt->bindValue($param, $vars[0], $vars[1])) {
-                throw new DbBindParamsException("Unable to bind parameters '$bind_params' to within SQL statement, $raw_sql .  Error: " . $conn->lastErrorMsg());
-            }
-        }
-
-        // Execute SQL
-        if (!$result = $stmt->execute()) { 
-            throw new DbQueryException("Unable to execute SQL statement, $raw_sql <br /><br />Error: " . $conn->lastErrorMsg());
-        }
-
-        // Return
-        return new SqlQueryResult($this, $result);
-    }
-
-    /**
-     * Fetch array
-     */
-    public function fetchArray(SqlQueryResult $result, int $position = null):?array
-    { 
-
-        // Get row
-        if (!$row = $result->getResult()->fetchArray(SQLITE3_NUM)) { 
-            return null;
-        }
-
-        // Return
-        return $row;
-    }
 
     /**
      * Fetch assoc
      */
-    public function fetchAssoc(SqlQueryResult $result, int $position = null):?array
+    public function fetchAssoc(\PDOStatement $stmt, int $position = null):?array
     { 
 
         // Get row
-        if (!$row = $result->getResult()->fetchArray(SQLITE3_ASSOC)) { 
+        if ($position === null) { 
+            $row = $stmt->fetch(PDO::FETCH_ASSOC, PDO::FETCH_ORI_NEXT);
+        } else { 
+            $row = $stmt->fetch(PDO::FETCH_ASSOC, PDO::FETCH_ORI_ABS, $position);
+        }
+
+        // Get row
+        if (!$row) { 
             return null;
         }
 
@@ -281,40 +151,11 @@ class SQLite extends AbstractSQL implements DbInterface
     }
 
     /**
-     * Number of rows affected
+     * Get number of rows in select result
      */
-    public function numRows($result):int
+    public function getSelectCount(\PDOStatement $stmt):int
     {
-
-        // Get result
-        if ($result instanceof SqlQueryResult) { 
-            $result = $result->getResult();
-        }
-
-        // Check if a query result
-        if ($result?->numColumns() == 0) {
-            $conn = $this->connect_mgr->getConnection('write');
-            return $conn->changes() ?? 0;
-        }
-
-        // Get total rows
-        $total = 0;
-        while ($row = $result->fetchArray()) { 
-            $total++;
-        }
-        $result->reset();
-
-        // Return
-        return $total;
-    }
-
-    /**
-     * Last insert id
-     */
-    public function insertId():?int
-    {
-        $conn = $this->connect_mgr->getConnection('write');
-        return $conn->lastInsertRowID() ?? 0;
+        return count($stmt->fetchAll());
     }
 
     /**
@@ -322,6 +163,11 @@ class SQLite extends AbstractSQL implements DbInterface
      */
     public function addTime(string $period, int $length, string $from_date, bool $return_datestamp = true):string
     {
+
+        // Check for valid period
+        if (!in_array($period, ['second', 'minute', 'hour', 'day', 'week', 'month', 'quarter', 'year'])) { 
+            throw new DbInvalidArgumentException("Invalid time period specified, $period.  Supported values are:  second, minute, hour, day, week, month, quarter, year");
+        }
 
         // Get SQL statement
         $func_name = "datetime('$from_date', '$length $period')";
@@ -345,6 +191,11 @@ class SQLite extends AbstractSQL implements DbInterface
     public function subtractTime(string $period, int $length, string $from_date, bool $return_datestamp = true):string
     {
 
+        // Check for valid period
+        if (!in_array($period, ['second', 'minute', 'hour', 'day', 'week', 'month', 'quarter', 'year'])) { 
+            throw new DbInvalidArgumentException("Invalid time period specified, $period.  Supported values are:  second, minute, hour, day, week, month, quarter, year");
+        }
+
         // Get SQL statement
         $func_name = "datetime('$from_date', '- " . $length . " $period')";
         $date = $this->getField("SELECT $func_name");
@@ -360,31 +211,6 @@ class SQLite extends AbstractSQL implements DbInterface
         // Return
         return $date;
     }
-
-    /**
-     * Check if table exists
-     */
-    public function checkTable(string $table_name):bool
-    { 
-        $tables = $this->getTableNames();
-        return in_array($table_name, $tables) ? true : false;
-    }
-
-    /**
-     * Begin transaction
-     */
-    public function beginTransaction(bool $force_write = false):void { } 
-    public function commit():void { }
-    public function rollback():void { }
-
-    /**
-     * Execute SQL file
-     */
-    public function executeSqlFile(string $filename):void
-    {
-        $this->executeSqlFileDo($this, $filename);
-    }
-
 
 }
 

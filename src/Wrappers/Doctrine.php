@@ -6,18 +6,35 @@ namespace Apex\Db\Wrappers;
 use \Doctrine\ORM\Tools\Setup;
 use \Doctrine\ORM\EntityManager;
 use \PDO;
+use Apex\Db\Interfaces\DbInterface;
 
-class Doctrine {
-	public static function init($conn, array $entityPaths = array(), array $opts = array()) {
-		$isDevMode = (isset($opts['isDevMode']) ? $opts['isDevMode'] : false);
-		$proxyDir = (isset($opts['proxyDir']) ? $opts['proxyDir'] : null);
-		$cache = (isset($opts['cache']) ? $opts['cache'] : null);
-		$useSimpleAnnotationReader = (isset($opts['useSimpleAnnotationReader']) ? $opts['useSimpleAnnotationReader'] : null);
-		$config = Setup::createAnnotationMetadataConfiguration($entityPaths, $isDevMode, $proxyDir, $cache, $useSimpleAnnotationReader);
 
-		$conn_opts = ['pdo' => $conn];
+/**
+ * Wrapper initialization class for Doctrine.
+ */
+class Doctrine 
+{
 
-		return EntityManager::create($conn_opts, $config);
-	}
+    /**
+     * Init DOctrine instance
+     */
+    public static function init(DbInterface $db, array $entityPaths = [], array $opts = []):EntityManager
+    {
+
+        // Set default options
+        $isDevMode = $opts['isDevMode'] ?? false;
+        $proxyDir = $opts['proxyDir'] ?? null;
+        $cache = $opts['cache'] ?? null;
+        $useSimpleAnnotationReader = $opts['useSimpleAnnotationReader'] ?? null;
+
+        // Create config
+        $config = Setup::createAnnotationMetadataConfiguration($entityPaths, $isDevMode, $proxyDir, $cache, $useSimpleAnnotationReader);
+        $conn_opts = ['pdo' => $db->connect_mgr->getConnection('write')];
+
+        // Init and return
+        return EntityManager::create($conn_opts, $config);
+    }
+
 }
-?>
+
+

@@ -33,7 +33,11 @@ class FromInstance
 
             // Add to values array
             $prop->setAccessible(true);
-            $values[$name] = $prop->getValue($obj);
+            $value = $prop->getValue($obj);
+            if ($name == 'id' && (string) $value == '0') { 
+                //continue;
+            }
+            $values[$name] = $value;
         }
 
         // Return

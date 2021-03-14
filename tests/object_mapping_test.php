@@ -39,7 +39,7 @@ class object_mapping_test extends TestCase
         $user = new UserModel('jsmith', 'John Smith', 'jsmith@domain.com');
         $db->insert('test_users', $user);
         $rows = $db->query("SELECT * FROM test_users");
-        $this->assertCount(1, $rows);
+        $this->assertEquals(1, $db->getSelectCount($rows));
 
         // Get single user
         $row = $db->getRow("SELECT * FROM test_users WHERE username = 'jsmith'");
@@ -120,7 +120,7 @@ class object_mapping_test extends TestCase
             $user->setEmail('new.kim@domain.com');
             $db->insertOrUpdate('test_users', $user);
             $rows = $db->query("SELECT * FROM test_users");
-            $this->assertCount(6, $rows);
+            $this->assertEquals(6, $db->getSelectCount($rows));
         }
 
         // Drop table

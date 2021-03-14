@@ -59,7 +59,7 @@ class redis_test extends TestCase
         // Test database
         $db->insert('test_redis', ['name' => 'Matt'], ['name' => 'Mike']);
         $rows = $db->query("SELECT * FROM test_redis");
-        $this->assertCount(2, $rows);
+        $this->assertEquals(2, $db->getSelectCount($rows));
 
         // Drop table
         $db->query("DROP TABLE test_redis");

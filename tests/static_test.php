@@ -49,7 +49,8 @@ class static_test extends TestCase
         $columns = Db::getColumnNames('test_users', true);
         $this->assertArrayHasKey('status', $columns);
         $this->assertArrayHasKey('name', $columns);
-        $this->assertEquals('varchar(100)', strtolower($columns['name']));
+        $col_type = $_SERVER['test_sql_driver'] == 'postgresql' ? 'character varying' : 'varchar(100)';
+        $this->assertEquals($col_type, strtolower($columns['name']));
 
         // Get column
         $names = Db::getColumn("SELECT name FROM test_users");
@@ -91,7 +92,7 @@ class static_test extends TestCase
         // Delete
         Db::delete('test_users', "status = %s", 'pending');
         $rows = Db::query("SELECT * FROM test_users");
-        $this->assertCount(2, $rows);
+        $this->assertEquals(2, $db->getSelectCount($rows));
 
         // Drop table
         Db::query("DROP TABLE test_users");

@@ -47,14 +47,14 @@ class FromInstance
     /**
      * Get id# of object
      */
-    public static function getObjectId(object $obj):?int
+    public static function getObjectId(object $obj, string $primary_key = 'id'):?string
     {
 
         // Get reflection class
         $reflect_obj = new \ReflectionClass($obj::class);
 
         // Get property
-        if (!$prop = $reflect_obj->getProperty('id')) { 
+        if (!$prop = $reflect_obj->getProperty($primary_key)) { 
             return null;
         } 
 
@@ -65,7 +65,7 @@ class FromInstance
         }
 
         // Return
-        return $id;
+        return (string) $id;
     }
 
 

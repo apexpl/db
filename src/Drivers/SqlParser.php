@@ -68,7 +68,7 @@ namespace Apex\Db\Drivers;
         
         // Parsing the SQL file content			 
         foreach ($lines as $sql_line):
-            $sql_line = trim($sql_line);
+            $sql_line = trim($sql_line, "\n");
             if($sql_line === "") continue;
             else if(strpos($sql_line, "--") === 0) continue;
             else if(strpos($sql_line, "#") === 0) continue;

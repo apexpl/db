@@ -31,6 +31,16 @@ interface DbInterface
      */
     public function clearCache();
 
+    /**
+     * Get database size in mb
+     */
+    public function getDatabaseSize():float;
+
+    /**
+     * Get primary key of table
+     */
+    public function getPrimaryKey(string $table_name):?string;
+
 
     /**
      * Insert record into database

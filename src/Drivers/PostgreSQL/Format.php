@@ -52,7 +52,7 @@ class Format
     { 
 
         // Initialize
-        $sql = Convert::convert($sql);
+        $sql = Convert::convert($conn, $sql);
         list($values, $raw_sql) = array([], $sql);
         array_unshift($args, $sql);
 

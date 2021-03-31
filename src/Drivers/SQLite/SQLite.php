@@ -121,6 +121,37 @@ class SQLite extends AbstractSQL implements DbInterface
         return $include_types === true ? $this->columns[$table_name] : array_keys($this->columns[$table_name]);
     }
 
+    /**
+     * Get database size in mb
+     */
+    public function getDatabaseSize():float
+    {
+
+        $row = $this->getRow("PRAGMA database_list;");
+        $size = sprintf("%.2f", (filesize($row['file']) / 1024 / 1024));
+        return (float) $size;
+    }
+
+    /**
+     * Get primary key of table
+     */
+    public function getPrimaryKey(string $table_name):?string
+    {
+
+        // Go through columns
+        $key = null;
+        $result = $this->query("PRAGMA table_info($table_name)");
+        while ($row = $this->fetchArray($result)) { 
+
+            if ($row[5] == 1) { 
+                $key = $row[1];
+                break;
+            }
+        }
+
+        // Return
+        return $key;
+    }
 
     /**
      * Fetch assoc

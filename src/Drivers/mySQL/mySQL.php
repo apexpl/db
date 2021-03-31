@@ -129,6 +129,30 @@ class mySQL extends AbstractSQL implements DbInterface
     }
 
     /**
+     * Get database size in mb
+     */
+    public function getDatabaseSize():float
+    {
+        $size = $this->getField("SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) FROM information_schema.tables WHERE table_schema = DATABASE()");
+        return (float) $size;
+    }
+
+    /**
+     * Get primary key of table
+     */
+    public function getPrimaryKey(string $table_name):?string
+    {
+
+        // Get primary index
+        if (!$row = $this->getRow("SHOW KEYS FROM $table_name WHERE Key_name = 'PRIMARY'")) { 
+            return null;
+        }
+
+        // Return
+        return $row['Column_name'] ?? null;
+    }
+
+    /**
      * Get number of rows in select result
      */
     public function getSelectCount(\PDOStatement $stmt):int

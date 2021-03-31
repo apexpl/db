@@ -97,6 +97,7 @@ class AbstractSQL
         try {
             $stmt->execute($values);
         } catch (\PDOException $e) {
+            $this->debugger?->finish();
             throw new DbQueryException("Unable to execute SQL statement, $raw_sql <br /><br />Error: " . $e->getMessage());
         }
 
@@ -242,9 +243,16 @@ class AbstractSQL
 
         // Map object, if needed
         if (is_object($updates)) { 
-            $record_id = FromInstance::getObjectId($updates);
+
+            // Get primary key
+            if (!$primary_key = $this->db->getPrimaryKey($table_name)) { 
+                throw new DbObjectNotExistsException("Unable to perform update as table '$table_name' does not have a primary key.");
+            }
+
+            // Map object
+            $record_id = FromInstance::getObjectId($updates, $primary_key);
             $updates = FromInstance::map($updates, $columns);
-            $args = ["id = %i", $record_id];
+            $args = ["$primary_key = %i", $record_id];
         }
 
         // Generate SQL
@@ -286,11 +294,16 @@ class AbstractSQL
         // Map from object, if needed
         if (is_object($where_clause)) { 
 
+            // GEt primary key
+            if (!$primary_key = $this->db->getPrimaryKey($table_name)) { 
+                throw new DbObjectNotExistsException("Unable to perform delete as table '$table_name' does not have a primary key.");
+            }
+
             // Get id# of object
-            if (!$id = FromInstance::getObjectId($where_clause)) { 
+            if (!$id = FromInstance::getObjectId($where_clause, $primary_key)) { 
                 throw new DbObjectNotExistsException("Unable to perform delete, as no 'id' variable exists within the provided object.");
             }
-            $sql .= " WHERE id = %i";
+            $sql .= " WHERE $primary_key = %i";
             $args = [$id];
 
         // String based where clause

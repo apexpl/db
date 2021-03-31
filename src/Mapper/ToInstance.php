@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Apex\Db\Mapper;
 
 use Apex\Container\Di;
+use Symfony\Component\String\UnicodeString;
 
 /**
  * Converts an associative array into object via reflection.
@@ -21,16 +22,20 @@ class ToInstance
         $obj = new \ReflectionClass($class_name);
         $instance = self::createInstance($obj, $row);
 
-        // Go through properties
-        $props = $obj->getProperties();
-        foreach ($props as $prop) { 
+        // Go through row
+        foreach ($row as $name => $value) { 
 
-            // Check name
-            $name = $prop->getName();
-            if (!isset($row[$name])) { 
+            // Get camel case method name
+            $word = new UnicodeString('set_' . $name);
+            $method = (string) $word->camel();
+
+            // Check for setter method
+            if ($obj->hasMethod($method)) { 
+                $instance->$method($value);
+                continue;
+            } elseif (!$prop = $obj->getProperty($name)) { 
                 continue;
             }
-            $value = $row[$name];
 
             // Type cast, if possible
             $type = $prop->getType()?->getName();
@@ -104,7 +109,6 @@ class ToInstance
         // Return
         return $args;
     }
-
 
 }
 

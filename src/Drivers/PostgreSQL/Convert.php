@@ -14,7 +14,7 @@ class Convert
     /**
      *  Convert mySQL to PostgreSQL
      */
-    public static   function convert(string $sql):string
+    public static   function convert(\PDO $conn, string $sql):string
     {
 
         // Set replacement
@@ -25,7 +25,7 @@ class Convert
             'datetime' => 'TIMESTAMP', 
             'longtext' => 'TEXT', 
             'longblob' => 'BYTEA', 
-            'blobl' => 'BYTEA', 
+            'blob' => 'BYTEA', 
             'rand()' => 'RANDOM()'
         ];
 
@@ -41,11 +41,11 @@ class Convert
 
         // Check for create table
         if (preg_match("/create table (.+?)\s/i", $sql, $match)) { 
-            $sql = self::create_table($sql, ($match[1]));
+            $sql = self::create_table($sql, ($match[1]), $conn);
 
         // Alter table
         } elseif (preg_match("/^alter table (.+?)\s(ADD|DROP|CHANGE|RENAME)\s(.+?)/i", $sql, $match)) { 
-            $sql = self::alter_table($sql, $match[1], $match[2], $match[3]);
+            $sql = self::alter_table($sql, $match[1], $match[2], $match[3], $conn);
         }
 
         // Return
@@ -56,7 +56,7 @@ class Convert
     /**
      * Create table
      */
-    protected static function create_table(string $sql, string $table_name):string
+    protected static function create_table(string $sql, string $table_name, \PDO $conn):string
     {
 
         // Additional replacements
@@ -64,7 +64,7 @@ class Convert
         $sql = preg_replace("/ DEFAULT CHARACTER SET=utf8/i", "", $sql);
 
         // Process enums
-        $sql = self::process_enums($sql, $table_name);
+        $sql = self::process_enums($sql, $table_name, $conn);
 
         // Return
         return $sql;
@@ -73,7 +73,7 @@ class Convert
     /**
      * Alter table
      */
-    protected static function alter_table(string $sql, string $table_name, string $action, string $end_sql):string
+    protected static function alter_table(string $sql, string $table_name, string $action, string $end_sql, \PDO $conn):string
     {
 
         // Initialize
@@ -114,7 +114,7 @@ class Convert
     /**
      * Process ENUMs
      */
-    protected static function process_enums(string $sql, string $table_name):string
+    protected static function process_enums(string $sql, string $table_name, \PDO $conn):string
     {
 
         // Check for ENUMs
@@ -126,8 +126,8 @@ class Convert
             $type_name = 'enum_' . $table_name . '_' . $col_name;
 
             // Add to SQL
-            db::query("DROP TYPE IF EXISTS $type_name");
-            db::query("CREATE TYPE $type_name AS ENUM (" . $match[4] . ")");
+            $conn->query("DROP TYPE IF EXISTS $type_name");
+            $conn->query("CREATE TYPE $type_name AS ENUM (" . $match[4] . ")");
             $sql = str_replace($match[0], "$col_name $type_name $match[5],", $sql);
         }
 

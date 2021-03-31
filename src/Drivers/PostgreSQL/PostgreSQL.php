@@ -137,6 +137,31 @@ class PostgreSQL extends AbstractSQL implements DbInterface
     }
 
     /**
+     * Get database size in mb
+     */
+    public function getDatabaseSize():float
+    {
+        $dbname = $this->getField("SELECT current_database()");
+        $size = $this->getField("SELECT (pg_database_size('$dbname') / 1024)");
+        return (float) sprintf("%.2f", ($size / 1024));
+    }
+
+    /**
+     * Get primary key of table
+     */
+    public function getPrimaryKey(string $table_name):?string
+    {
+
+        // Get primary index
+        if (!$key = $this->getField("SELECT pg_attribute.attname FROM pg_index, pg_class, pg_attribute, pg_namespace WHERE pg_class.oid = %s::regclass AND indrelid = pg_class.oid AND nspname = 'public' AND pg_class.relnamespace = pg_namespace.oid AND pg_attribute.attrelid = pg_class.oid AND pg_attribute.attnum = any(pg_index.indkey) AND indisprimary", $table_name)) { 
+            return null;
+        }
+
+        // Return
+        return $key;
+    }
+
+    /**
      * Get number of rows in select result
      */
     public function getSelectCount(\PDOStatement $stmt):int

@@ -23,6 +23,8 @@ The following methods are available for all SQL drivers:
 * [getField()](./sql/getField.md)
 * [getHash()](./sql/getHash.md)
 * [getIdRow()](./sql/getIdRow.md)
+* [getIdObject()](./sql/getIdObject.md)
+* [getObject()](./sql/getObject.md)
 * [getPrimaryKey()](./sql/getPrimaryKey.md)
 * [getRow()](./sql/getRow.md)
 * [getSelectCount()](./sql/getSelectCount.md)

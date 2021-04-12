@@ -19,6 +19,15 @@ class PDO
         return $db->connect_mgr->getConnection($conn_type);
     }
 
+    /**
+     * Import
+     */
+    public static function import(DbInterface $db, \PDO $pdo)
+    {
+        $db->connect_mgr->importConnection($pdo);
+    }
+
+
 }
 
 

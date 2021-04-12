@@ -23,6 +23,22 @@ class Eloquent
         return new Manager($db->connect_mgr->getConnection('write'));
     }
 
+    /**
+     * Import
+     */
+    public static function import(DbInterface $db, $manager)
+    {
+
+        // Get PDO object
+        $pdo = $manager->getConnection()->getRawPdo();
+        if (!$pdo instanceof \PDO) { 
+            throw new DbWrapperException("Unable to import Eloquent instance, as did not get a PDO instance.  Got a " . $pdo::class . " instance instead.");
+        }
+
+        // Import connection
+        $db->connect_mgr->importConnection($pdo);
+    }
+
 }
 
 

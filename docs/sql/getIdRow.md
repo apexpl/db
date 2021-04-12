@@ -14,7 +14,7 @@ Param | Required | Type | Description
 `$id_number` | Yes | string | The unique id# of the record to retrieve.  Must by the `id` column of the database table.
 
 
-**Return Values:** An object fully instantiated and injected if the `$map_class` argument was passed, otherwise an associative array of the first row found.  Returns null if no record was found.
+**Return Values:** An associative array of the first row found.  Returns null if no record was found.
 
 
 #### Example
@@ -37,13 +37,6 @@ if (!$row = $db->getIdRow('users', $userid)) {
     die("No user at the id# $userid");
 }
 echo "Username: " . $row['username'] . "\n";
-
-
-// Same query, but get an object this time
-if (!$row = $db->getIdRow('users', $userid)) { 
-    die("No user at the id# $userid");
-}
-$user = ToInstance::map(UserModel::class, $row);
-echo "Username: " . $user->getUsername() . "\n";
 ~~~
+
 

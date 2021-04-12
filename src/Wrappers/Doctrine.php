@@ -5,8 +5,9 @@ namespace Apex\Db\Wrappers;
 
 use \Doctrine\ORM\Tools\Setup;
 use \Doctrine\ORM\EntityManager;
-use \PDO;
+use Apex\Db\Exceptions\DbWrapperException;
 use Apex\Db\Interfaces\DbInterface;
+use \PDO;
 
 
 /**
@@ -35,6 +36,23 @@ class Doctrine
         return EntityManager::create($conn_opts, $config);
     }
 
+    /**
+     * Import
+     */
+    public static function import(DbInterface $db, EntityManager $manager)
+    {
+
+        // Get PDO object
+        $pdo = $manager->getConnection()->getWrappedConnection();
+        if (!$pdo instanceof \PDO) { 
+            throw new DbWrapperException("Unable to import Doctrine instance, as did not get a PDO instance.  Got a " . $pdo::class . " instance instead.");
+        }
+
+        // Import connection
+        $db->connect_mgr->importConnection($pdo);
+    }
+
 }
+
 
 

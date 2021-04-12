@@ -68,9 +68,19 @@ interface DbInterface
     public function getRow(string $sql, ...$args):?array;
 
     /**
+     * Get single / first object
+     */
+    public function getObject(string $class_name, string $sql, ...$args):?object;
+
+    /**
      * Get single row by id#
      */
     public function getIdRow(string $table_name, string | int $id, string $idcol = 'id'):?array;
+
+    /**
+     * Get single object by id#
+     */
+    public function getIdObject(string $class_name, string $table_name, string | int $id, string $id_col = ''):?object;
 
     /**
      * Get single column

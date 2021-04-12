@@ -22,46 +22,28 @@ class ToInstance
         $obj = new \ReflectionClass($class_name);
         $instance = self::createInstance($obj, $row);
 
-        // Go through row
-        foreach ($row as $name => $value) { 
+        // Map args
+        $props = $obj->getProperties();
+        $args = self::mapArgs($row, $props);
 
-            // Get camel case method name
-            $word = new UnicodeString('set_' . $name);
-            $method = (string) $word->camel();
+        // Go through properties
+        foreach ($props as $prop) {
 
-            // Check for setter method
-            if ($obj->hasMethod($method)) { 
-                $instance->$method($value);
-                continue;
-            } elseif (!$prop = $obj->getProperty($name)) { 
+            // Check for value
+            $name = $prop->getName();
+            if (!isset($args[$name])) { 
                 continue;
             }
 
-            // Type cast, if possible
-            $type = $prop->getType()?->getName();
-            if ($type !== null) { 
-
-                $value = match($type) {
-                    'int' => (int) $row[$name], 
-                    'float' => (float) $row[$name], 
-                    'bool' => (bool) $row[$name], 
-                    default => (string) $row[$name]
-                };
-
-                // Check type
-                if ($type != GetType($value)) { 
-                    continue;
-                }
-            }
-
-            // Inject
+            // Inject value
             $prop->setAccessible(true);
-            $prop->setValue($instance, $value);
+            $prop->setValue($instance, $args[$name]);
         }
 
         // Return
         return $instance;
     }
+
 
     /**
      * Create new instance
@@ -70,15 +52,15 @@ class ToInstance
     {
 
         // Check for constructor
+        $constructor_args = [];
         if ($method = $obj->getConstructor()) { 
-            $constructor_args = self::getConstructorArgs($method, $row);
-        } else { 
-            $constructor_args = [];
+            $params = $method->getParameters();
+            $constructor_args = self::mapArgs($row, $params);
         }
 
         // Instantiate object
         if (class_exists(Di::class)) { 
-            $instance = Di::make($class_name, $row);
+            $instance = Di::make($obj->getName(), $constructor_args);
         } else { 
             $instance = $obj->NewInstanceArgs($constructor_args);
         }
@@ -88,27 +70,45 @@ class ToInstance
     }
 
     /**
-     * Get constructor args
+     * Map args for constructor / object properties
      */
-    private static function getConstructorArgs(\ReflectionMethod $method, array $row):array
+    private static function mapArgs(array $row, array $props):array
     {
 
-        // Go through parameters
+        // Go through props / params
         $args = [];
-        $params = $method->getParameters();
-        foreach ($params as $param) { 
+        foreach ($props as $prop) { 
 
             // Check name
-            $name = $param->getName();
+            $name = $prop->getName();
             if (!isset($row[$name])) { 
-                continue; 
-                }
-            $args[$name] = $row[$name];
+                continue;
+            }
+
+            // Get property type
+            $type = $prop->getType()?->getName();
+            if ($type === null) { 
+                $args[$name] = $row[$name];
+                continue;
+            }
+
+            // Type cast, if possible
+            $value = match($type) {
+                'int' => (int) $row[$name], 
+                'float' => (float) $row[$name], 
+                'bool' => $row[$name] == 1 ? true : false, 
+                'DateTime' => $row[$name] === null ? null : new \DateTime($row[$name]), 
+                default => (string) $row[$name]
+            };
+
+            // Add to args
+            $args[$name] = $value;
         }
 
         // Return
         return $args;
     }
+
 
 }
 

@@ -31,11 +31,16 @@ class FromInstance
                 continue;
             }
 
-            // Add to values array
+            // Ensure property initialized
             $prop->setAccessible(true);
+            if (!$prop->isInitialized($obj)) { 
+                continue;
+            }
+
+            // Add to values array
             $value = $prop->getValue($obj);
-            if ($name == 'id' && (string) $value == '0') { 
-                //continue;
+            if ($value === null) { 
+                continue;
             }
             $values[$name] = $value;
         }

@@ -24,15 +24,17 @@ class AbstractSQL
     public Connections $connect_mgr;
     public ?DebuggerInterface $debugger;
 
-        // Array properties
+    // Array properties
     protected array $prepared = [];
     protected array $tables = [];
     protected array $columns = [];
+    protected array $primary_keys = [];
 
-        // Force write properties
-        protected bool $force_write = false;
-        protected bool $force_write_transaction = false;
-        protected bool $force_write_always = false;
+    // Force write properties
+    protected bool $force_write = false;
+    protected bool $force_write_transaction = false;
+    protected bool $force_write_always = false;
+    protected int $in_transaction = 0;
 
 
     /**
@@ -332,9 +334,25 @@ class AbstractSQL
     }
 
     /**
+     * Get single / first row
+     */
+    public function getObject(string $class_name, string $sql, ...$args):?object
+    { 
+
+        // Get first row
+        if (!$row = $this->getRow($sql, ...$args)) { 
+            return null;
+        }
+
+        // Map ot object, and return
+        $obj = ToInstance::map($class_name, $row);
+        return $obj;
+    }
+
+    /**
      * Get single row by id#
      */
-    public function getIdRow(string $table_name, string | int $id, string $id_col = 'id'):?array
+    public function getIdRow(string $table_name, string | int $id, string $id_col = ''):?array
     { 
 
         // Check if table exists
@@ -342,13 +360,37 @@ class AbstractSQL
             throw new DbTableNotExistsException("Unable to perform insert, as database table does not exist, $table_name");
         }
 
+        // Get primary key, if needed
+        if ($id_col == '' && isset($this->primary_keys[$table_name])) { 
+            $id_col = $this->primary_keys[$table_name];
+        } elseif ($id_col == '') { 
+            $id_col = $this->db->getPrimaryKey($table_name);
+            $this->primary_keys[$table_name] = $id_col;
+        }
+
         // Get first row
-        if (!$row = $this->getRow("SELECT * FROM $table_name WHERE $id_col = %s ORDER BY id LIMIT 1", $id)) { 
+        if (!$row = $this->getRow("SELECT * FROM $table_name WHERE $id_col = %s ORDER BY $id_col LIMIT 1", $id)) { 
             return null;
         }
 
         // Return
         return $row;
+    }
+
+    /**
+     * Get single object by id#
+     */
+    public function getIdObject(string $class_name, string $table_name, string | int $id, string $id_col = ''):?object
+    { 
+
+        // Get row
+        if (!$row = $this->getIdRow($table_name, $id, $id_col)) { 
+            return null;
+        }
+
+        // Map and return
+        $obj = ToInstance::map($class_name, $row);
+        return $obj;
     }
 
     /**
@@ -491,6 +533,12 @@ class AbstractSQL
     public function beginTransaction(bool $force_write = false):void
     {
 
+        // Return if already in transaction
+        if ($this->in_transaction > 0) { 
+            $this->in_transaction++;
+            return;
+        }
+
         // Get connection
         $conn = $this->connect_mgr->getConnection('write');
 
@@ -503,7 +551,7 @@ class AbstractSQL
 
         // Set force write
         $this->force_write_transaction = $force_write;
-
+        $this->in_transaction++;
     }
 
     /**
@@ -511,6 +559,14 @@ class AbstractSQL
      */
     public function commit():void
     { 
+
+        // Check if in transaction
+        if ($this->in_transaction > 1) { 
+            $this->in_transaction--;
+            return;
+        } elseif ($this->in_transaction == 0) { 
+            return;
+        }
 
         // Get connection
         $conn = $this->connect_mgr->getConnection('write');
@@ -522,6 +578,7 @@ class AbstractSQL
             throw new DbCommitException("Unable to commit database transaction, error: " . $e->getMessage());
         }
         $this->force_write_transaction = false;
+    $this->in_transaction--;
 
     }
 
@@ -530,6 +587,14 @@ class AbstractSQL
      */
     public function rollback():void
     { 
+
+        // Check if in transaction
+        if ($this->in_transaction > 1) { 
+            $this->in_transaction--;
+            return;
+        } elseif ($this->in_transaction == 0) { 
+            return;
+        }
 
         // Get connection
         $conn = $this->connect_mgr->getConnection('write');
@@ -541,6 +606,7 @@ class AbstractSQL
             throw new DbRollbackException("Unable to rollback database transaction, error: " . $e->getMessage());
         }
         $this->force_write_transaction = false;
+        $this->in_transaction--;
 
     }
 

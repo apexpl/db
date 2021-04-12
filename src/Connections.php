@@ -53,6 +53,14 @@ class Connections
     }
 
     /**
+     * Import connection
+     */
+    public function importConnection(\PDO $pdo, string $type = 'write'):void
+    {
+        $this->connections[$type] = $pdo;
+    }
+
+    /**
      * Get connection
      */
     public function getConnection(string $type)

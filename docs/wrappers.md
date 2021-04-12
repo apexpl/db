@@ -58,4 +58,23 @@ $pdo = \Apex\Db\Wrappers\PDO::init($db);
 ~~~
 
 
+## Importing Connections
+
+All three wrappers also contain a static `import()` method allowing you to do the reverse, and import a Doctrine / Eloquent / PDO connection into ADL.  This may be useful if using the <a href="https://github.com/apexpl/armor">Apex Armor</a> package or similar, and you wish to take advantage of the package while remaining within your preferred ORM.  For example:
+
+~~~php
+use Apex\Db\Drivers\PostgreSQL\PostgreSQL;
+use Apex\Db\Wrappers\Doctrine;
+use \Doctrine\ORM\EntityManager;
+
+// Instance of Doctrine EntityManager
+$manager = ...;
+
+// Import into ADL
+$db = new PostgreSQL();
+Doctrine::import($db, $manager);
+~~~
+
+That's it, and the `$db` instance will now have the Doctrine database connection imported into it, and ready for use.
+
 

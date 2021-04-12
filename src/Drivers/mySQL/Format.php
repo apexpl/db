@@ -69,11 +69,11 @@ class Format
                     $value = $args[1][$match[2]];
                 }
             }
-            $value = (string) $value;
+            $orig_value = (string) $value;
 
             // Check value
-            if (($value = self::checkValue($col_type, $value)) === null) {  
-                throw new DbInvalidArgumentException("Invalid SQL argument, expecting a " . (self::$data_types[$col_type] ?? $col_type) . " and received '$value' instead within SQL statement, $raw_sql");
+            if (($value = self::checkValue($col_type, $orig_value)) === null) {  
+                throw new DbInvalidArgumentException("Invalid SQL argument, expecting a " . (self::$data_types[$col_type] ?? $col_type) . " and received '$orig_value' instead within SQL statement, $raw_sql");
             }
             $values[] = $col_type == 'ls' ? '%' . $value . '%' : $value;
 
@@ -101,9 +101,8 @@ class Format
 
         // Check if value valid
         $is_valid = match (true) {
-
-            ($type == 'i' && preg_match("/\D/", $value)) ? true : false => false, 
-            ($type == 'd' && !preg_match("/^[0-9]+(\.[0-9]{1,8})?$/", $value)) ? true : false => false, 
+            ($type == 'i' && !preg_match("/[0-9]+/", ltrim($value, '-'))) ? true : false => false, 
+            ($type == 'd' && !preg_match("/^[0-9]+(\.[0-9]{1,8})?$/", ltrim($value, '-'))) ? true : false => false, 
             ($type == 'b' && !in_array($value, ['0', '1'])) ? true : false => false, 
             ($type == 'email' && !filter_var($value, FILTER_VALIDATE_EMAIL)) ? true : false => false, 
             ($type == 'url' && !filter_var($value, FILTER_VALIDATE_URL)) ? true : false => false, 

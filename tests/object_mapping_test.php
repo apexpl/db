@@ -42,8 +42,7 @@ class object_mapping_test extends TestCase
         $this->assertEquals(1, $db->getSelectCount($rows));
 
         // Get single user
-        $row = $db->getRow("SELECT * FROM test_users WHERE username = 'jsmith'");
-        $user = ToInstance::map(UserModel::class, $row);
+        $user = $db->getObject(UserModel::class, "SELECT * FROM test_users WHERE username = 'jsmith'");
         $this->assertIsObject($user);
         $this->assertEquals('jsmith', $user->getUsername());
         $this->assertEquals('John Smith', $user->getFullName());
@@ -73,8 +72,7 @@ class object_mapping_test extends TestCase
         $this->assertEquals('jsmith', $hash['1']);
 
         // Get single user
-        $row = $db->getRow("SELECT * FROM test_users WHERE username = 'jsmith'");
-        $user = ToInstance::map(UserModel::class, $row);
+        $user = $db->getObject(UserModel::class, "SELECT * FROM test_users WHERE username = 'jsmith'");
         $this->assertIsObject($user);
         $this->assertEquals('jsmith', $user->getUsername());
         $this->assertEquals('John Smith', $user->getFullName());
@@ -110,8 +108,7 @@ class object_mapping_test extends TestCase
             $db->insertOrUpdate('test_users', $user);
 
             // Check kim
-            $row = $db->getIdRow('test_users', 7);
-            $user = ToInstance::map(UserModel::class, $row);
+            $user = $db->getIdObject(UserModel::class, 'test_users', 7);
             $this->assertIsObject($user);
             $this->assertEquals('kim', $user->getUsername());
             $this->assertEquals('kim@domain.com', $user->getEmail());

@@ -23,6 +23,7 @@ class AbstractFormat
         } elseif (in_array($type, ['i', 'd', 'b']) && $value == '') { 
             $value = 0;
         }
+        $value = (string) $value;
 
         // Check if value valid
         $is_valid = match (true) {

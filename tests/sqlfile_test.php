@@ -36,6 +36,7 @@ class sqlfile_test extends TestCase
         $this->assertContains('brad', $users);
 
         // Drop table
+        $db->closeCursors();
         $db->query("DROP TABLE test_import");
     }
 

@@ -62,6 +62,7 @@ class redis_test extends TestCase
         $this->assertEquals(2, $db->getSelectCount($rows));
 
         // Drop table
+        $db->closeCursors();
         $db->query("DROP TABLE test_redis");
     }
 

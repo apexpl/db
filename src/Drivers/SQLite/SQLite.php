@@ -171,12 +171,6 @@ class SQLite extends AbstractSQL implements DbInterface
             return null;
         }
 
-        // Check for 'rowid'
-        if (isset($row['rowid'])) { 
-            $row['id'] = $row['rowid'];
-            unset($row['rowid']);
-        }
-
         // Return
         return $row;
     }

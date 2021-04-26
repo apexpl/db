@@ -66,6 +66,8 @@ class wrappers_test extends TestCase
         // PDO
         $pdo = \Apex\Db\Wrappers\PDO::init($db);
         $this->assertEquals(PDO::class, $pdo::class);
+
+        $db->closeCursors();
     }
 
 }

@@ -188,6 +188,11 @@ interface DbInterface
      */
     public function forceWrite(bool $always = false):void;
 
+    /**
+     * Close open cursors
+     */
+    public function closeCursors():void;
+
 
 }
 

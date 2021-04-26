@@ -95,6 +95,18 @@ class Connections
         return $this->connections[$type];
     }
 
+    /**
+     * Close all connections
+     */
+    public function closeAll():void
+    {
+
+        foreach ($this->connections as $type => $conn) { 
+        $this->connections[$type] = null;
+        }
+        $this->connections = [];
+    }
+
 }
 
 

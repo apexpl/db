@@ -3,13 +3,14 @@ declare(strict_types = 1);
 
 namespace Apex\Db\Drivers\PostgreSQL;
 
+use Apex\Db\Drivers\AbstractFormat;
 use Apex\Db\Drivers\PostgreSQL\Convert;
 use Apex\Db\Exceptions\DbInvalidArgumentException;
 
 /**
  * Helper class to format SQL queries properly against SQL injection, et al.
  */
-class Format
+class Format extends AbstractFormat
 {
 
     // Data types
@@ -34,6 +35,7 @@ class Format
         $col_type = strtolower($col_type);
         $type = match (true) {
             $col_type == 'tinyint(1)' => '%b', 
+            $col_type == 'boolean' => '%b', 
             preg_match("/int\(/", $col_type) ? true : false => '%i',
             preg_match("/decimal\(/", $col_type) ? true : false => '%d', 
             preg_match("/bytea/", $col_type) ? true : false => '%blob', 
@@ -77,7 +79,11 @@ class Format
             }
 
             // Add to values
-            if (preg_match("/blob/i", $col_type)) { $value = pg_escape_bytea($conn, $value); }
+            if (preg_match("/blob/i", $col_type)) { 
+                $value = pg_escape_bytea($conn, $value); 
+            } elseif ($col_type == 'b') { 
+                $value = $value == 1 ? 't' : 'f';
+            }
             $values[] = $col_type == 'ls' ? '%' . $value . '%' : $value;
 
             // Replace placeholder in SQL
@@ -87,53 +93,6 @@ class Format
 
         // Return
         return array($args[0], $raw_sql, $values);
-    }
-
-    /**
-     * Check value
-     */
-    public static function checkValue(string $type, string $value):?string
-    {
-
-        // Initial checks / formatting
-        if ($type == 'd' && is_float($value) && preg_match('/e/i', (string) $value)) { 
-            $value = sprintf("%f", floatval($value)); 
-        } elseif (in_array($type, ['i', 'd', 'b']) && $value == '') { 
-            $value = '0';
-        }
-
-        // Check if value valid
-        $is_valid = match (true) {
-            ($type == 'i' && !preg_match("/[0-9]+/", ltrim($value, '-'))) ? true : false => false, 
-            ($type == 'd' && !preg_match("/^[0-9]+(\.[0-9]{1,8})?$/", ltrim($value, '-'))) ? true : false => false, 
-            ($type == 'b' && !in_array($value, ['0', '1'])) ? true : false => false, 
-            ($type == 'email' && !filter_var($value, FILTER_VALIDATE_EMAIL)) ? true : false => false, 
-            ($type == 'url' && !filter_var($value, FILTER_VALIDATE_URL)) ? true : false => false, 
-            ($type == 'ds' && !preg_match("/^\d{4}-\d{2}-\d{2}$/", $value)) ? true : false => false, 
-            ($type == 'ts' && !preg_match("/^\d{2}:\d{2}:\d{2}$/", $value)) ? true : false => false, 
-            ($type == 'dt' && !preg_match("/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/", $value)) ? true : false => false, 
-            default => true
-        };
-
-        // Return
-        return $is_valid === true ? $value : null;
-    }
-
-    /**
-     * Get bind param
-     */
-    public static function getBindParam(string $col_type):string
-    {
-        $param = match($col_type) {
-            'i', 'b' => 'i', 
-            'd' => 'd', 
-            'blob' => 'b', 
-            default => 's'
-        };
-
-        // Return
-        return $param;
-
     }
 
     /**
@@ -159,6 +118,7 @@ class Format
     }
 
 }
+
 
 
 

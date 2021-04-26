@@ -677,6 +677,21 @@ class AbstractSQL
         return $conn_type;
     }
 
+    /**
+     * Close all open cursors
+     */
+    public function closeCursors():void
+    {
+
+        // Close cursors
+        foreach ($this->prepared as $stmt) { 
+            if ($stmt instanceof \PDOStatement) { 
+                $stmt->closeCursor();
+            }
+        }
+
+    }
+
 }
 
 

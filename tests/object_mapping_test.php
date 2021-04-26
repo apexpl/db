@@ -121,7 +121,9 @@ class object_mapping_test extends TestCase
         }
 
         // Drop table
-        //$db->query("DROP TABLE test_users");
+        $db->closeCursors();
+        $db->query("DROP TABLE test_users");
+
     }
 
 }

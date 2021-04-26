@@ -95,6 +95,7 @@ class static_test extends TestCase
         $this->assertEquals(2, $db->getSelectCount($rows));
 
         // Drop table
+        $db->closeCursors();
         Db::query("DROP TABLE test_users");
         $this->assertTrue(Db::checkTable('test_users'));
         Db::clearCache();

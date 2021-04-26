@@ -75,6 +75,7 @@ class transactiontest extends TestCase
         $this->assertEquals(15.00, $order['amount']);
 
         // Delete tables
+        $db->closeCursors();
         $db->query("DROP TABLE IF EXISTS test_orders");
         $db->query("DROP TABLE IF EXISTS test_users");
     }

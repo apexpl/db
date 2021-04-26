@@ -19,10 +19,7 @@ class Convert
 
         // Set replacement
         $replacements = [
-            'INT NOT NULL PRIMARY KEY AUTO_INCREMENT' => 'int rowid', 
-            'SELECT * FROM' => 'SELECT rowid,* FROM', 
-            ' id = ' => ' rowid = ', 
-        'SELECT id,' => 'SELECT rowid,'
+            'INT NOT NULL PRIMARY KEY AUTO_INCREMENT' => 'integer primary key', 
         ];
 
         // Initial replacements

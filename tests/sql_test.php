@@ -93,10 +93,13 @@ class sqltest extends TestCase
         $this->assertEquals(2, $db->getSelectCount($rows));
 
         // Drop table
+        $db->closeCursors();
         $db->query("DROP TABLE test_users");
         $this->assertTrue($db->checkTable('test_users'));
         $db->clearCache();
         $this->assertfalse($db->checkTable('test_users'));
+
+
 
     }
 

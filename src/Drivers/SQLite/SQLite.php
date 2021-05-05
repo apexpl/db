@@ -74,6 +74,9 @@ class SQLite extends AbstractSQL implements DbInterface
             throw new DbConnectException("Unable to connect to database using supplied information.  Error: " . $e->getMessage());
         }
 
+        // Enable foreign keys
+        $conn->query("PRAGMA foreign_keys = ON");
+
         // Return
         return $conn;
     }
@@ -222,7 +225,7 @@ class SQLite extends AbstractSQL implements DbInterface
         }
 
         // Get SQL statement
-        $func_name = "datetime('$from_date', '- " . $length . " $period')";
+        $func_name = "datetime('$from_date', '-" . $length . " $period')";
         $date = $this->getField("SELECT $func_name");
 
         // Get timestamp, if needed

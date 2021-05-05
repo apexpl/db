@@ -100,7 +100,7 @@ class AbstractSQL
             $stmt->execute($values);
         } catch (\PDOException $e) {
             $this->debugger?->finish();
-            throw new DbQueryException("Unable to execute SQL statement, $raw_sql <br /><br />Error: " . $e->getMessage());
+            throw new DbQueryException("Unable to execute SQL statement with error: " . $e->getMessage() . "<br /><br />SQL: $raw_sql");
         }
 
         // Return
@@ -328,6 +328,7 @@ class AbstractSQL
         if (!$row = $this->fetchAssoc($result)) { 
             return null;
         }
+        $result->closeCursor();
 
         // Return
         return $row;
@@ -405,6 +406,7 @@ class AbstractSQL
         while ($row = $this->fetchArray($result)) { 
             $cvalues[] = $row[0];
         }
+    $result->closeCursor();
 
         // Return
         return $cvalues;
@@ -422,6 +424,7 @@ class AbstractSQL
         while ($row = $this->fetchArray($result)) { 
             $vars[$row[0]] = $row[1];
         }
+        $result->closeCursor();
 
         // Return
         return $vars;
@@ -438,6 +441,7 @@ class AbstractSQL
         if (!$row = $this->fetchArray($result)) { 
             return null;
         }
+        $result->closeCursor();
 
         // Return
         return $row[0];

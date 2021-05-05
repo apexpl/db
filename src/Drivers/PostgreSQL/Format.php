@@ -79,8 +79,8 @@ class Format extends AbstractFormat
             }
 
             // Add to values
-            if (preg_match("/blob/i", $col_type)) { 
-                $value = pg_escape_bytea($conn, $value); 
+            if (preg_match("/blob|bytea/i", $col_type)) { 
+                $value = mb_convert_encoding($value, 'UTF-8');
             } elseif ($col_type == 'b') { 
                 $value = $value == 1 ? 't' : 'f';
             }
@@ -88,6 +88,7 @@ class Format extends AbstractFormat
 
             // Replace placeholder in SQL
             $args[0] = preg_replace("/" . preg_quote($match[0]) . "/", '?', $args[0], 1);
+            $value = preg_match("/blob|bytea/i", $col_type) ? '--BLOB--' : $value;
             $raw_sql = preg_replace("/" . preg_quote($match[0]) . "/", "'" . $value . "'", $raw_sql, 1);
         }
 

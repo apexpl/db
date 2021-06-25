@@ -193,7 +193,6 @@ interface DbInterface
      */
     public function closeCursors():void;
 
-
 }
 
 

@@ -19,7 +19,6 @@ use PDO;
 class mySQL extends AbstractSQL implements DbInterface
 {
 
-
     /**
      * Constructor
      */
@@ -126,6 +125,30 @@ class mySQL extends AbstractSQL implements DbInterface
 
         // Return
         return $include_types === true ? $this->columns[$table_name] : array_keys($this->columns[$table_name]);
+    }
+
+    /**
+     * Get column defaults
+     */
+    public function getColumnDetails(string $table_name):array
+    { 
+
+        // Get column names
+        $details = [];
+        $result = $this->query("DESCRIBE $table_name");
+        while ($row = $this->fetchArray($result)) { 
+
+            $details[$row[0]] = [
+                'type' => $row[1], 
+                'is_primary' => strtolower($row[3]) == 'pri' ? true : false, 
+                'key' => strtolower($row[3]), 
+                'allow_null' => strtolower($row[2]) == 'yes' ? true : false, 
+                'default' => $row[4]
+            ];
+        }
+
+        // Return
+        return $details;
     }
 
     /**

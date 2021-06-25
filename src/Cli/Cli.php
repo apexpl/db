@@ -42,7 +42,7 @@ class Cli
     /**
      * Show help
      */
-    protected static function showHelp():void
+    public static function showHelp():void
     {
 
         // Send header

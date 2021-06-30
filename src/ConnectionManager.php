@@ -44,6 +44,7 @@ class ConnectionManager
         // Save to redis
         if ($type == 'write') { 
             $this->redis->hmset('config:db.master', $params);
+
         } else { 
 
             $aliases = $this->redis->lrange('config:db.readonly', 0, -1);

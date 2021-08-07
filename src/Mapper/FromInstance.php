@@ -14,7 +14,7 @@ class FromInstance
     /**
      * Map object to array
      */
-    public static function map(object $obj, array $columns):array
+    public static function map(object $obj, array $columns = []):array
     {
 
         // Get properties
@@ -27,7 +27,7 @@ class FromInstance
 
             // Check name
             $name = $prop->getName();
-            if (!in_array($name, array_keys($columns))) { 
+            if (count($columns) > 0 && !in_array($name, array_keys($columns))) { 
                 continue;
             }
 
@@ -38,7 +38,7 @@ class FromInstance
             }
 
             // Add to values array
-            $value = $prop->getValue($obj);
+            $value = self::getValue($prop, $obj);
             if ($value === null) { 
                 continue;
             }
@@ -47,6 +47,27 @@ class FromInstance
 
         // Return
         return $values;
+    }
+
+    /**
+     * Get value of property
+     */
+    public static function getValue(\ReflectionProperty | \ReflectionParam $prop, object $obj):mixed
+    {
+
+        // Initialize
+        $value = $prop->getValue($obj);
+
+        // Check if has type
+        if ($prop->hasType() === true && $prop->getType()->isBuiltin() !== true && $value !== null) { 
+            $name = $prop->getType()?->getName();
+            if ($name == 'DateTime') { 
+                $value = $value->format('Y-m-d H:i:s');
+            }
+        }
+
+        // Return
+        return $value;
     }
 
     /**

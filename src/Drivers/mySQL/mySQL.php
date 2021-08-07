@@ -140,7 +140,10 @@ class mySQL extends AbstractSQL implements DbInterface
 
             $details[$row[0]] = [
                 'type' => $row[1], 
-                'is_primary' => strtolower($row[3]) == 'pri' ? true : false, 
+                'length' => preg_match("/\((.+?)\)/", $row[1], $m) ? $m[1] : '',
+                'is_primary' => strtolower($row[3]) == 'pri' ? true : false,
+                'is_unique' => strtolower($row[3]) == 'uni' ? true : false,
+                'is_auto_increment' => strtolower($row[5]) == 'auto_increment' ? true : false,
                 'key' => strtolower($row[3]), 
                 'allow_null' => strtolower($row[2]) == 'yes' ? true : false, 
                 'default' => $row[4]
@@ -150,6 +153,42 @@ class mySQL extends AbstractSQL implements DbInterface
         // Return
         return $details;
     }
+
+    /**
+     * Get foreign keys
+     */
+    public function getForeignKeys(string $table_name):array
+    {
+
+        // Initialize
+        $foreign_keys = [];
+        $columns = $this->getColumnDetails($table_name);
+
+        // Go through indexes
+        $result = $this->query("SELECT TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE REFERENCED_TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s", $table_name);
+        while ($row = $this->fetchArray($result)) { 
+
+            // Get column info
+            $col = $columns[$row[1]];
+            $ref_columns = $this->getColumnDetails($row[3]);
+            $ref = $ref_columns[$row[4]];
+
+            // Get type
+            $type = $col['is_primary'] === true || $col['is_unique'] === true ? 'one_to_' : 'many_to_';
+            $type .= ($ref['is_primary'] === true || $ref['is_unique'] === true ? 'one' : 'many');
+
+            // Add to keys
+            $foreign_keys[$row[1]] = [
+                'table' => $row[3],
+                'column' => $row[4],
+                'type' => $type
+            ]; 
+        }
+
+        // Return
+        return $foreign_keys;
+    }
+
 
     /**
      * Get database size in mb

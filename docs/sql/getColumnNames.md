@@ -11,7 +11,6 @@
 Param | Required | Type | Description
 ------------- |------------- |------------- |------------- 
 `$table_name` | Yes | string | The name of the database table to get column names of.
-
 `$return_types` | No | bool | Whether or not to include the column types in response.  Defaults to false.
 
 

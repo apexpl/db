@@ -206,7 +206,35 @@ class SQLite extends AbstractSQL implements DbInterface
      */
     public function getForeignKeys(string $table_name):array
     {
-        return [];
+
+        // Initialize
+        $foreign_keys = [];
+        $columns = $this->getColumnDetails($table_name);
+
+        // Go through keys
+        $result = $this->query("SELECT * FROM pragma_foreign_key_list(%s)", $table_name);
+        while ($row = $this->fetchAssoc($result)) { 
+
+            // Get column info
+            $col = $columns[$row['from']];
+            $ref_columns = $this->getColumnDetails($row['table']);
+            $ref = $ref_columns[$row['to']];
+
+            // Get type
+            $type = $col['is_primary'] === true || $col['is_unique'] === true ? 'one_to_' : 'many_to_';
+            $type .= ($ref['is_primary'] === true || $ref['is_unique'] === true ? 'one' : 'many');
+
+            // Add to keys
+            $foreign_keys[$row['from']] = [
+                'table' => $row['table'],
+                'column' => $row['to'],
+                'type' => $type
+            ]; 
+
+        }
+
+        // Return
+        return $foreign_keys;
     }
 
     /**
@@ -214,7 +242,48 @@ class SQLite extends AbstractSQL implements DbInterface
      */
     public function getReferencedForeignKeys(string $table_name):array
     {
-        return [];
+
+        // Initialize
+        $foreign_keys = [];
+        $ref_columns = $this->getColumnDetails($table_name);
+        $tables = $this->getTableNames();
+
+        // GO through all tables
+        foreach ($tables as $dbtable) { 
+
+            // Get foreign keys
+            $keys = $this->getForeignKeys($dbtable);
+            foreach ($keys as $alias => $row) { 
+
+                // Skip, if not table
+                if ($row['table'] != $table_name) { 
+                    continue;
+                }
+
+                // Get column info
+                $columns = $this->getColumnDetails($dbtable);
+                $col = $columns[$alias];
+                $ref = $ref_columns[$row['column']];
+
+                // Get type
+                $type = $col['is_primary'] === true || $col['is_unique'] === true ? 'many_to_' : 'one_to_';
+                $type .= ($ref['is_primary'] === true || $ref['is_unique'] === true ? 'many' : 'one');
+
+                // Add to keys
+                $key_alias = $dbtable . '.' . $alias;
+                $foreign_keys[$key_alias] = [
+                    'table' => $row['table'],
+                    'column' => $row['column'],
+                    'type' => $type,
+                    'ref_table' => $dbtable,
+                    'ref_column' => $alias
+                ]; 
+
+            }
+        }
+
+        // Return
+        return $foreign_keys;
     }
 
     /**

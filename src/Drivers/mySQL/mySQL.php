@@ -139,7 +139,7 @@ class mySQL extends AbstractSQL implements DbInterface
         while ($row = $this->fetchArray($result)) { 
 
             $details[$row[0]] = [
-                'type' => $row[1], 
+                'type' => $row[1] == 'tinyint(1)' ? 'boolean' : $row[1],
                 'length' => preg_match("/\((.+?)\)/", $row[1], $m) ? $m[1] : '',
                 'is_primary' => strtolower($row[3]) == 'pri' ? true : false,
                 'is_unique' => strtolower($row[3]) == 'uni' ? true : false,
@@ -189,6 +189,43 @@ class mySQL extends AbstractSQL implements DbInterface
         return $foreign_keys;
     }
 
+    /**
+     * Get referenced foreign keys
+     */
+    public function getReferencedForeignKeys(string $table_name):array
+    {
+
+        // Initialize
+        $foreign_keys = [];
+        $ref_columns = $this->getColumnDetails($table_name);
+
+        // Go through indexes
+        $result = $this->query("SELECT TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE REFERENCED_TABLE_SCHEMA = DATABASE() AND REFERENCED_TABLE_NAME = %s", $table_name);
+        while ($row = $this->fetchArray($result)) { 
+
+            // Get column info
+            $columns = $this->getColumnDetails($row[0]);
+            $col = $columns[$row[1]];
+            $ref = $ref_columns[$row[4]];
+
+            // Get type
+            $type = $col['is_primary'] === true || $col['is_unique'] === true ? 'many_to_' : 'one_to_';
+            $type .= ($ref['is_primary'] === true || $ref['is_unique'] === true ? 'many' : 'one');
+
+            // Add to keys
+            $alias = $row[0] . '.' . $row[1];
+            $foreign_keys[$alias] = [
+                'table' => $row[3],
+                'column' => $row[4],
+                'type' => $type,
+                'ref_table' => $row[0],
+                'ref_column' => $row[1]
+            ]; 
+        }
+
+        // Return
+        return $foreign_keys;
+    }
 
     /**
      * Get database size in mb

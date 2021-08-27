@@ -28,6 +28,7 @@ The following methods are available for all SQL drivers:
 * [getIdObject()](./sql/getIdObject.md)
 * [getObject()](./sql/getObject.md)
 * [getPrimaryKey()](./sql/getPrimaryKey.md)
+* [getReferencedForeignKeys()](./sql/getReferencedForeignKeys.md)
 * [getRow()](./sql/getRow.md)
 * [getSelectCount()](./sql/getSelectCount.md)
 * [getTableNames()](./sql/getTableNames.md)

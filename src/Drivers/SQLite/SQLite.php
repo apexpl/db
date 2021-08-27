@@ -125,6 +125,99 @@ class SQLite extends AbstractSQL implements DbInterface
     }
 
     /**
+     * Get column defaults
+     */
+    public function getColumnDetails(string $table_name):array
+    {
+
+        // Initialize
+        $unique_columns = $this->getUniqueColumns($table_name);
+        $results = [];
+
+        $result = $this->query("PRAGMA table_info($table_name)");
+        while ($row = $this->fetchAssoc($result)) { 
+
+            // Get type
+            $row['type'] = strtolower($row['type']);
+            $type = match($row['type']) { 
+                'integer' => 'int',
+                default => $row['type']
+            };
+
+            // Get lanegth
+            $length = '';
+            if (preg_match("/\((.+?)\)/", $type, $m)) { 
+                $length = $m[1];
+            }
+
+            // Check default against boolean
+            $default = $row['dflt_value'];
+            if ($type == 'boolean') { 
+                $default = $default == 'true' ? true : false;
+            }
+
+            // Add to results
+            $results[$row['name']] = [
+                'type' => $type,
+                'length' => $length,
+                'is_primary' => $row['pk'] == 1 ? true : false,
+                'is_unique' => in_array($row['name'], $unique_columns),
+                'is_auto_increment' => $row['name'] == 'id' ? true : false,
+                'key' => $row['name'] == 'id' ? 'pri' : '',
+                'allow_null' => $row['notnull'] == 1 ? false : true,
+                'default' => $default
+            ];
+
+        }
+
+        // Return
+        return $results;
+    }
+
+    /**
+     * Get unique columns
+     */
+    public function getUniqueColumns(string $table_name):array
+    {
+
+        // Go through indexes
+        $unique_columns = [];
+        $result = $this->query("PRAGMA index_list($table_name)");
+        while ($row = $this->fetchAssoc($result)) { 
+
+            // Check for unique
+            if ($row['unique'] != 1) { 
+                continue;
+            }
+
+            // Get index info
+            if (!$idx = $this->db->getRow("PRAGMA INDEX_INFO($row[name])")) { 
+                continue;
+            }
+            $unique_columns[] = $idx['name'];
+        }
+
+        // Return
+        return $unique_columns;
+    }
+
+    /**
+     * Get foreign keys
+     */
+    public function getForeignKeys(string $table_name):array
+    {
+        return [];
+    }
+
+    /**
+     * Get referenced foreign keys
+     */
+    public function getReferencedForeignKeys(string $table_name):array
+    {
+        return [];
+    }
+
+    /**
      * Get database size in mb
      */
     public function getDatabaseSize():float

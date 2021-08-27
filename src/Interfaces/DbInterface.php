@@ -27,6 +27,24 @@ interface DbInterface
     public function getColumnNames(string $table_name, bool $include_types = false):array;
 
     /**
+     * Get column details
+     */
+    public function getColumnDetails(string $table_name):array;
+
+
+    /**
+     * Get foreign keys
+     */
+    public function getForeignKeys(string $table_name):array;
+
+
+    /**
+     * Get referenced foreign keys
+     */
+    public function getReferencedForeignKeys(string $table_name):array;
+
+
+    /**
      * Clear cache
      */
     public function clearCache();

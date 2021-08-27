@@ -137,6 +137,155 @@ class PostgreSQL extends AbstractSQL implements DbInterface
     }
 
     /**
+     * Get column defaults
+     */
+    public function getColumnDetails(string $table_name):array
+    {
+
+        // Initialize
+        $primary_col = $this->getPrimaryKey($table_name);
+        $unique_columns = $this->getColumn("SELECT pg_attribute.attname FROM pg_index, pg_class, pg_attribute, pg_namespace WHERE pg_class.oid = %s::regclass AND indrelid = pg_class.oid AND nspname = 'public' AND pg_class.relnamespace = pg_namespace.oid AND pg_attribute.attrelid = pg_class.oid AND pg_attribute.attnum = any(pg_index.indkey) AND indisunique", $table_name);
+        $results = [];
+
+        // Go through table columns
+        $result = $this->query("SELECT column_name, data_type, column_default, is_nullable, character_maximum_length, numeric_precision, numeric_precision_radix FROM information_schema.columns WHERE table_name = '$table_name'");
+        while ($row = $this->fetchAssoc($result)) { 
+
+            // Set variables
+            $col_name = $row['column_name'];
+            $key = match (true) { 
+                $primary_col == $col_name ? true : false => 'pri',
+                in_array($col_name, $unique_columns) ? true : false => 'uni',
+                default => ''
+            };
+
+            // Get column type
+            $type = match($row['data_type']) {
+                'character varying' => 'varchar',
+                'integer' => 'int',
+                'numeric' => 'decimal',
+                default => $row['data_type']
+            };
+
+            // Check for decimal type
+            if ($type == 'decimal') {
+                $decimals = ($row['numeric_precision'] - $row['numeric_precision_radix']);
+                $row['character_maximum_length'] = $row['numeric_precision'] . ',' . $decimals;
+                $type .= '(' . $row['character_maximum_length'] . ')';
+            } elseif ($type == 'varchar') { 
+                $type .= '(' . $row['character_maximum_length'] . ')';
+            }
+
+        // Get default / is_auto_incremnet
+            $is_auto_increment = false;
+            $default = $row['column_default'] === null ? '' : $row['column_default'];
+            if (preg_match("/^nextval/", $default)) { 
+                $is_auto_increment = true;
+                $default = '';
+            }
+
+            // Default for boolean
+            if ($type == 'boolean') { 
+                $default = $default == 'true' ? true : false;
+            }
+
+
+            // Set in results
+            $results[$col_name] = [
+                'type' => $type,
+                'length' => $row['character_maximum_length'],
+                'is_primary' => $primary_col == $col_name ? true : false,
+                'is_unique' => in_array($col_name, $unique_columns),
+                'is_auto_increment' => $is_auto_increment,
+                'key' => $key,
+                'allow_null' => strtolower($row['is_nullable']) == 'yes' ? true : false, 
+                'default' => $default
+            ];
+        }
+
+        // Return
+        return $results;
+    }
+
+    /**
+     * Get foreign keys
+     */
+    public function getForeignKeys(string $table_name):array
+    {
+
+        // Initialize
+        $foreign_keys = [];
+        $columns = $this->getColumnDetails($table_name);
+
+        // Get keys
+        $result = $this->query("SELECT tc.table_schema, tc.constraint_name, tc.table_name, kcu.column_name, ccu.table_schema AS foreign_table_schema, ccu.table_name AS foreign_table_name, ccu.column_name AS foreign_column_name FROM information_schema.table_constraints AS tc JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name AND ccu.table_schema = tc.table_schema WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_name = %s", $table_name);
+        while ($row = $this->fetchAssoc($result)) {
+
+            // Get column info
+            $col = $columns[$row['column_name']];
+            $ref_columns = $this->getColumnDetails($row['foreign_table_name']);
+            $ref = $ref_columns[$row['foreign_column_name']];
+
+            // Get type
+            $type = $col['is_primary'] === true || $col['is_unique'] === true ? 'one_to_' : 'many_to_';
+            $type .= ($ref['is_primary'] === true || $ref['is_unique'] === true ? 'one' : 'many');
+
+            // Add to keys
+            $foreign_keys[$row['column_name']] = [
+                'table' => $row['foreign_table_name'],
+                'column' => $row['foreign_column_name'],
+                'type' => $type
+            ]; 
+
+
+        }
+
+        // Return
+        return $foreign_keys;
+    }
+
+    /**
+     * Get referenced foreign keys
+     */
+    public function getReferencedForeignKeys(string $table_name):array
+    {
+
+        // Initialize
+        $foreign_keys = [];
+        $ref_columns = $this->getColumnDetails($table_name);
+
+        // Go through keys
+        $result = $this->query("SELECT tc.table_schema, tc.constraint_name, tc.table_name, kcu.column_name, ccu.table_schema AS foreign_table_schema, ccu.table_name AS foreign_table_name, ccu.column_name AS foreign_column_name FROM information_schema.table_constraints AS tc JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name AND ccu.table_schema = tc.table_schema WHERE tc.constraint_type = 'FOREIGN KEY' AND ccu.table_name = %s", $table_name);
+        while ($row = $this->fetchAssoc($result)) { 
+
+            // Get column info
+            $columns = $this->getColumnDetails($row['table_name']);
+            $col = $columns[$row['column_name']];
+            $ref = $ref_columns[$row['foreign_column_name']];
+
+            // Get type
+            $type = $col['is_primary'] === true || $col['is_unique'] === true ? 'many_to_' : 'one_to_';
+            $type .= ($ref['is_primary'] === true || $ref['is_unique'] === true ? 'many' : 'one');
+
+            // Add to keys
+            $alias = $row['table_name'] . '.' . $row['column_name'];
+            $foreign_keys[$alias] = [
+                'table' => $row['foreign_table_name'],
+                'column' => $row['foreign_column_name'],
+                'type' => $type,
+                'ref_table' => $row['table_name'],
+                'ref_column' => $row['column_name']
+            ]; 
+
+        }
+
+        // Return
+        return $foreign_keys;
+    }
+
+
+
+    /**
      * Get database size in mb
      */
     public function getDatabaseSize():float

@@ -296,6 +296,21 @@ class PostgreSQL extends AbstractSQL implements DbInterface
     }
 
     /**
+     * Reset auto increment column
+     */
+    public function truncate(string $table_name):void
+    {
+
+        // Delete from table
+        $this->query("TRUNCATE $table_name");
+
+        // Reset sequence
+        $primary_key = $this->getPrimaryKey($table_name);
+        $seq_name = $table_name . '_' . $primary_key . '_seq'; 
+        $this->query("ALTER SEQUENCE $seq_name RESTART WITH 1;");
+    }
+
+    /**
      * Get primary key of table
      */
     public function getPrimaryKey(string $table_name):?string

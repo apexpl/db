@@ -237,6 +237,15 @@ class mySQL extends AbstractSQL implements DbInterface
     }
 
     /**
+     * Reset auto increment column
+     */
+    public function truncate(string $table_name):void
+    {
+        $this->query("TRUNCATE $table_name");
+        $this->query("ALTER TABLE $table_name AUTO_INCREMENT = 1;");
+    }
+
+    /**
      * Get primary key of table
      */
     public function getPrimaryKey(string $table_name):?string
@@ -272,7 +281,7 @@ class mySQL extends AbstractSQL implements DbInterface
 
         // Get current date, if needed
         if ($from_date == '') { 
-            $from_date = $db->getField("SELECT now()");
+            $from_date = $this->getField("SELECT now()");
         }
 
         // Get SQL statement

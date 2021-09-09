@@ -39,6 +39,7 @@ The following methods are available for all SQL drivers:
 * [query()](./sql/query.md)
 * [rollback()](./sql/rollback.md)
 * [subtractTime()](./sql/subtractTime.md)
+* [truncate()](./sql/truncate.md)
 * [update()](./sql/update.md)
 
 

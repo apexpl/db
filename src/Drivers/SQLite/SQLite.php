@@ -298,6 +298,14 @@ class SQLite extends AbstractSQL implements DbInterface
     }
 
     /**
+     * Reset auto increment column
+     */
+    public function resetAutoIncrement(string $table_name):void
+    {
+        $this->query("DELETE FROM $table_name");
+    }
+
+    /**
      * Get primary key of table
      */
     public function getPrimaryKey(string $table_name):?string

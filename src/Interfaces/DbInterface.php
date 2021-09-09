@@ -55,6 +55,11 @@ interface DbInterface
     public function getDatabaseSize():float;
 
     /**
+     * Truncate table
+     */
+    public function truncate(string $table_name):void;
+
+    /**
      * Get primary key of table
      */
     public function getPrimaryKey(string $table_name):?string;

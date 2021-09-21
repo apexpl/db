@@ -216,6 +216,20 @@ interface DbInterface
      */
     public function closeCursors():void;
 
+    /**
+     * Drop table
+     */
+    public function dropTable(string $table_name):void;
+
+
+    /**
+     * Drop all tables
+     */
+    public function dropAllTables():void;
+
+
+
+
 }
 
 

@@ -696,6 +696,44 @@ class AbstractSQL
 
     }
 
+    /**
+     * Drop table
+     */
+    public function dropTable(string $table_name):void
+    {
+
+        // Check table exists
+        if (!$this->checkTable($table_name)) {
+            return;
+        }
+
+        // Get referenced foreign keys
+        $keys = $this->db->getReferencedForeignKeys($table_name);
+
+        // Go through foreign keys
+        foreach ($keys as $alias => $vars) {
+            $this->dropTable($vars['ref_table']);
+        }
+
+        // Drop table
+        $this->query("DROP TABLE $table_name");
+    }
+
+    /**
+     * Drop all tables
+     */
+    public function dropAllTables():void
+    {
+
+        // Go through all tables
+        $tables = $this->db->getTableNames();
+        foreach ($tables as $table_name) {
+            $this->dropTable($table_name);
+            $this->clearCache();
+        }
+
+    }
+
 }
 
 

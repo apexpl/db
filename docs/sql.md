@@ -11,6 +11,8 @@ The following methods are available for all SQL drivers:
 * [commit()](./sql/commit.md)
 * [connect()](./sql/connect.md)
 * [delete()](./sql/delete.md)
+* [dropAllTables()](./sql/dropAllTables.md)
+* [dropTable()](./sql/dropTable.md)
 * [eval()](./sql/eval.md)
 * [executeSqlFile()](./sql/executeSqlFile.md)
 * [fetchArray()](./sql/fetchArray.md)

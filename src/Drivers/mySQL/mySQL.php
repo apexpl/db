@@ -20,7 +20,7 @@ class mySQL extends AbstractSQL implements DbInterface
 {
 
     /**
-     * Constructor
+     * Instantiate a new database connection object.
      */
     public function __construct(
         array $params = [], 
@@ -54,7 +54,7 @@ class mySQL extends AbstractSQL implements DbInterface
     } 
 
     /**
-     * Connect to database
+     * Used internally to lazy connect to the database upon first SQL statement being performed.
      */
     public function connect(string $dbname, string $user, string $password = '', string $host = 'localhost', int $port = 3306):PDO
     { 
@@ -85,7 +85,7 @@ class mySQL extends AbstractSQL implements DbInterface
     }
 
     /**
-     * Get table names
+     * Get a list of all table names within the database.
      */
     public function getTableNames():array
     { 
@@ -106,7 +106,7 @@ class mySQL extends AbstractSQL implements DbInterface
     }
 
     /**
-     * Get columns of table.
+     * Get all column names within a database table, optionally with column type.
      */
     public function getColumnNames(string $table_name, bool $include_types = false):array
     { 
@@ -128,7 +128,7 @@ class mySQL extends AbstractSQL implements DbInterface
     }
 
     /**
-     * Get column defaults
+     * Get details on all columns within a database table including type, whether it's primary or unique, allows null, et al.
      */
     public function getColumnDetails(string $table_name):array
     { 
@@ -155,7 +155,7 @@ class mySQL extends AbstractSQL implements DbInterface
     }
 
     /**
-     * Get foreign keys
+     * Get all foreign key constraints of a database table.
      */
     public function getForeignKeys(string $table_name):array
     {
@@ -190,7 +190,7 @@ class mySQL extends AbstractSQL implements DbInterface
     }
 
     /**
-     * Get referenced foreign keys
+     * Get the foreign key constraints that other database tables have on a given database table.
      */
     public function getReferencedForeignKeys(string $table_name):array
     {
@@ -228,7 +228,7 @@ class mySQL extends AbstractSQL implements DbInterface
     }
 
     /**
-     * Get database size in mb
+     * Get the size of the database.
      */
     public function getDatabaseSize():float
     {
@@ -237,7 +237,7 @@ class mySQL extends AbstractSQL implements DbInterface
     }
 
     /**
-     * Reset auto increment column
+     * Delete all rows in a database table, and reset auto increment column.
      */
     public function truncate(string $table_name):void
     {
@@ -246,7 +246,7 @@ class mySQL extends AbstractSQL implements DbInterface
     }
 
     /**
-     * Get primary key of table
+     * Get the name of the primary key column of a database table.
      */
     public function getPrimaryKey(string $table_name):?string
     {
@@ -261,7 +261,7 @@ class mySQL extends AbstractSQL implements DbInterface
     }
 
     /**
-     * Get number of rows in select result
+     * Get total number of rows container within result of a select statement.
      */
     public function getSelectCount(\PDOStatement $stmt):int
     {
@@ -269,7 +269,7 @@ class mySQL extends AbstractSQL implements DbInterface
     }
 
     /**
-     * Add time
+     * Add a time period and interval to another time.
      */
     public function addTime(string $period, int $length, string $from_date = '', bool $return_datestamp = true):string
     {
@@ -293,7 +293,7 @@ class mySQL extends AbstractSQL implements DbInterface
     }
 
     /**
-     * Subtract time
+     * Subtract a time period and interval from another time.
      */
     public function subtractTime(string $period, int $length, string $from_date, bool $return_datestamp = true):string
     {

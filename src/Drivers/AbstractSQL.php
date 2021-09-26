@@ -38,7 +38,7 @@ class AbstractSQL
 
 
     /**
-     * Set formatter
+     * Set the formatter object.  Used internally.
      */
     public function setFormatter($formatter)
     {
@@ -46,7 +46,7 @@ class AbstractSQL
     }
 
     /**
-     * Set debugger
+     * Set debugger instance.  Used internally.
      */
     protected function setDebugger(?DebuggerInterface $debugger):void
     {
@@ -54,7 +54,7 @@ class AbstractSQL
     }
 
     /**
-     * Set db
+     * Set db instance.  Used internally.
      */
     protected function setDb(DbInterface $db):void
     {
@@ -62,7 +62,7 @@ class AbstractSQL
     }
 
     /**
-     * Query SQL statement
+     * Execute SQL statement against the database.
      */
     public function query(string $sql, ...$args):\PDOStatement
     { 
@@ -108,7 +108,7 @@ class AbstractSQL
     }
 
     /**
-     * Insert row(s)
+     * Insert new record(s) into a database table.
      */
     public function insert(string $table_name, ...$args):void
     { 
@@ -176,7 +176,7 @@ class AbstractSQL
     }
 
     /**
-     * Insert or update
+     * Insert or update a record into a database table.
      */
     public function insertOrUpdate(string $table_name, ...$args):void
     { 
@@ -229,7 +229,7 @@ class AbstractSQL
     }
 
     /**
-     * Update
+     * Update one or more records within a database table.
      */
     public function update(string $table_name, array | object $updates, ...$args):void
     { 
@@ -282,7 +282,7 @@ class AbstractSQL
     }
 
     /**
-     * Delete
+     * Delete one or more records within a database table.
      */
     public function delete(string $table_name, string | object $where_clause, ...$args):void
     { 
@@ -318,7 +318,7 @@ class AbstractSQL
     }
 
     /**
-     * Get single / first row
+     * Get the first row retrived as an associative array.
      */
     public function getRow(string $sql, ...$args):?array
     { 
@@ -335,7 +335,7 @@ class AbstractSQL
     }
 
     /**
-     * Get single / first row
+     * Get the first row retrived mapped to an object.
      */
     public function getObject(string $class_name, string $sql, ...$args):?object
     { 
@@ -351,7 +351,7 @@ class AbstractSQL
     }
 
     /**
-     * Get single row by id#
+     * Get a single row by value of the id / primary key column as an associative array.
      */
     public function getIdRow(string $table_name, string | int $id, string $id_col = ''):?array
     { 
@@ -379,7 +379,7 @@ class AbstractSQL
     }
 
     /**
-     * Get single object by id#
+     * Get a single row by the value of the table's id / primary key column mapped to an object.
      */
     public function getIdObject(string $class_name, string $table_name, string | int $id, string $id_col = ''):?object
     { 
@@ -395,7 +395,7 @@ class AbstractSQL
     }
 
     /**
-     * Get single column
+     * Get a one dimensional array of a single column within a database table.
      */
     public function getColumn(string $sql, ...$args):array
     { 
@@ -413,7 +413,7 @@ class AbstractSQL
     }
 
     /**
-     * Get two column hash 
+     * Get an associative array of two columns within a database table.
      */
     public function getHash(string $sql, ...$args):array
     { 
@@ -431,7 +431,7 @@ class AbstractSQL
     }
 
     /**
-     * Get single field / value
+     * Get value of a single column within the first row retrived.
      */
     public function getField(string $sql, ...$args):mixed
     { 
@@ -448,7 +448,7 @@ class AbstractSQL
     }
 
     /**
-     * Eval
+     * Evaluate SQL statement.  Used to include SQL statement within queries (eg. now(), et al)
      */
     public function eval(string $sql):mixed
     {
@@ -456,7 +456,7 @@ class AbstractSQL
     }
 
     /**
-     * Fetch array
+     * Get the next row of a query result as a numbered array.
      */
     public function fetchArray(\PDOStatement $stmt, int $position = null):?array
     { 
@@ -478,7 +478,7 @@ class AbstractSQL
     }
 
     /**
-     * Fetch assoc
+     * Get he next row of a query result as an associative array with column names.
      */
     public function fetchAssoc(\PDOStatement $stmt, int $position = null):?array
     { 
@@ -500,7 +500,7 @@ class AbstractSQL
     }
 
     /**
-     * Fetch object
+     * Get the next row of a query result mapped to an object.
      */
     public function fetchObject(\PDOStatement $stmt, string $class_name, int $position = null):?object
     {
@@ -515,7 +515,7 @@ class AbstractSQL
     }
 
     /**
-     * Number of rows affected
+     * Get the number of rows affected by a query result.
      */
     public function numRows(\PDOStatement $stmt):int
     { 
@@ -523,16 +523,16 @@ class AbstractSQL
     }
 
     /**
-     * Last insert id
+     * Get value of the last auto incremented column generated during an insert.
      */
     public function insertId():?int
     {
-        $conn = $this->connect_mgr->getConnection('write');
+        $conn = $thigs->connect_mgr->getConnection('write');
         return (int) $conn->lastInsertId();
     }
 
     /**
-     * Begin transaction
+     * Begin a database transaction.
      */
     public function beginTransaction(bool $force_write = false):void
     {
@@ -559,7 +559,7 @@ class AbstractSQL
     }
 
     /**
-     * Commit transaction 
+     * Commit a database transaction.
      */
     public function commit():void
     { 
@@ -587,7 +587,7 @@ class AbstractSQL
     }
 
     /**
-     * Rollback transaction
+     * Rollback a database transaction.
      */
     public function rollback():void
     { 
@@ -615,7 +615,7 @@ class AbstractSQL
     }
 
     /**
-     * Execute SQL file
+     * Execute all SQL code within a file on the on the local machine.
      */
     public function executeSqlFile(string $filename):void
     {
@@ -628,7 +628,7 @@ class AbstractSQL
     }
 
     /**
-     * Force write connection on next query.
+     * Force all SQL queries to the master / write database connection, and never connect to the read-only connection.
      */
     public function forceWrite(bool $always = false):void
     {
@@ -637,7 +637,7 @@ class AbstractSQL
     }
 
     /**
-     * Clear cache
+     * Upon retrieving table or column names, the results will be cached for future call to the functin during the request.  Use this to clear that cache.
      */
     public function clearCache()
     {
@@ -646,7 +646,7 @@ class AbstractSQL
     }
 
     /**
-     * Check if table exists
+     * Check whether or not a database table exists.
      */
     public function checkTable(string $table_name):bool
     { 
@@ -656,9 +656,8 @@ class AbstractSQL
 
 
     /**
-     * Determine connection type for SQL query.
+     * Determine if a query is read-only or requires write access.
      *
-     * @return string - Either 'read' or 'write'
      */
     protected function determineConnType(string $sql):string
     {
@@ -682,7 +681,7 @@ class AbstractSQL
     }
 
     /**
-     * Close all open cursors
+     * Close all currently open cursors within the database.
      */
     public function closeCursors():void
     {
@@ -697,7 +696,7 @@ class AbstractSQL
     }
 
     /**
-     * Drop table
+     * Drop database table including any child tables with foreign key constraints to the table.
      */
     public function dropTable(string $table_name):void
     {
@@ -720,7 +719,7 @@ class AbstractSQL
     }
 
     /**
-     * Drop all tables
+     * Drop all tables within the database in proper order so as to not receive foreign key constraint errors.
      */
     public function dropAllTables():void
     {

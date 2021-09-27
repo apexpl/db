@@ -106,6 +106,23 @@ class mySQL extends AbstractSQL implements DbInterface
     }
 
     /**
+     * Get view names
+     */
+    public function getViewNames():array
+    {
+
+        // Go through rows
+        $views = [];
+        $result = $this->query("SHOW FULL TABLES WHERE TABLE_TYPE = 'VIEW';");
+        while ($row = $this->fetchArray($result)) {
+            $views[] = $row[0];
+        }
+
+        // Return
+        return $views;
+    }
+
+    /**
      * Get all column names within a database table, optionally with column type.
      */
     public function getColumnNames(string $table_name, bool $include_types = false):array

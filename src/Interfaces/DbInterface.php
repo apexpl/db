@@ -22,6 +22,11 @@ interface DbInterface
     public function getTableNames():array;
 
     /**
+     * Get view names
+     */
+    public function getViewNames():array;
+
+    /**
      * Get columns of table.
      */
     public function getColumnNames(string $table_name, bool $include_types = false):array;

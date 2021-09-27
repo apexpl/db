@@ -103,6 +103,23 @@ class SQLite extends AbstractSQL implements DbInterface
     }
 
     /**
+     * Get view names
+     */
+    public function getViewNames():array
+    {
+
+        // Get views
+        $views = [];
+        $result = $this->query("SELECT name FROM sqlite_master WHERE type='view'");
+        while ($row = $this->fetchArray($result)) {
+            $views[] = $row[0];
+        }
+
+        // Return
+        return $views;
+    }
+
+    /**
      * Get columns of table.
      */
     public function getColumnNames(string $table_name, bool $include_types = false):array
@@ -300,7 +317,7 @@ class SQLite extends AbstractSQL implements DbInterface
     /**
      * Reset auto increment column
      */
-    public function resetAutoIncrement(string $table_name):void
+    public function truncate(string $table_name):void
     {
         $this->query("DELETE FROM $table_name");
     }

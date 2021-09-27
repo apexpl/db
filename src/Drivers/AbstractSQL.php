@@ -724,6 +724,12 @@ class AbstractSQL
     public function dropAllTables():void
     {
 
+        // Drop all views
+        $views = $this->db->getViewNames();
+        foreach ($views as $view) {
+            $this->query("DROP VIEW $view");
+        }
+
         // Go through all tables
         $tables = $this->db->getTableNames();
         foreach ($tables as $table_name) {

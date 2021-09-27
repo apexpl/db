@@ -115,6 +115,23 @@ class PostgreSQL extends AbstractSQL implements DbInterface
     }
 
     /**
+     * Get view names
+     */
+    public function getViewNames():array
+    {
+
+        // Get views
+        $views = [];
+        $result = $this->query("SELECT table_name FROM INFORMATION_SCHEMA.views WHERE table_schema = 'public'");
+        while ($row = $this->fetchArray($result)) {
+            $views[] = $row[0];
+        }
+
+        // Return
+        return $views;
+    }
+
+    /**
      * Get column names of table
      */
     public function getColumnNames(string $table_name, bool $include_types = false):array

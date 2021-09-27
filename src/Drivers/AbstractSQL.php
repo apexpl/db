@@ -527,7 +527,7 @@ class AbstractSQL
      */
     public function insertId():?int
     {
-        $conn = $thigs->connect_mgr->getConnection('write');
+        $conn = $this->connect_mgr->getConnection('write');
         return (int) $conn->lastInsertId();
     }
 

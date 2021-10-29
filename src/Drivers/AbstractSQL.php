@@ -702,6 +702,7 @@ class AbstractSQL
     {
 
         // Check table exists
+        $this->clearCache();
         if (!$this->checkTable($table_name)) {
             return;
         }

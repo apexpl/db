@@ -91,9 +91,9 @@ class mySQL extends AbstractSQL implements DbInterface
     { 
 
         // Check if tables already retrieved
-    if (count($this->tables) > 0) { 
-            return $this->tables;
-        }
+    //if (count($this->tables) > 0) { 
+            //return $this->tables;
+        //}
 
         // Get tables
         $result = $this->query("SHOW TABLES");
@@ -129,9 +129,9 @@ class mySQL extends AbstractSQL implements DbInterface
     { 
 
         // Check if we already have columns
-        if (isset($this->columns[$table_name]) && is_array($this->columns[$table_name]) && count($this->columns[$table_name]) > 0) { 
-            return $include_types === true ? $this->columns[$table_name] : array_keys($this->columns[$table_name]);
-        }
+        //if (isset($this->columns[$table_name]) && is_array($this->columns[$table_name]) && count($this->columns[$table_name]) > 0) { 
+            //return $include_types === true ? $this->columns[$table_name] : array_keys($this->columns[$table_name]);
+        //}
 
         // Get column names
         $this->columns[$table_name] = [];

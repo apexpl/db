@@ -90,6 +90,11 @@ class ToInstance
             if ($type === null) { 
                 $args[$name] = $row[$name];
                 continue;
+
+            // Check for enum
+            } elseif (enum_exists($type)) {
+                $args[$name] = is_scalar($row[$name]) ? $type::from($row[$name]) : $row[$name];
+                continue;
             }
 
             // Type cast, if possible

@@ -141,6 +141,9 @@ class AbstractSQL
             }
         }
 
+        // Get primary key
+        $primary_key = $this->getPrimaryKey($table_name);
+
         // Generate value sets
         list($has_id, $value_sets) = [false, []];
         foreach ($arg_sets as $set) { 
@@ -149,9 +152,9 @@ class AbstractSQL
             $placeholders = [];
             foreach ($set as $column => $value) { 
 
-                if ($column == 'id' && (int) $value == 0) { 
+                if ($column == $primary_key && (int) $value == 0) { 
                     continue; 
-                } elseif ($column == 'id') { 
+                } elseif ($column == $primary_key) { 
                     $has_id = true;
                 }
 
@@ -163,7 +166,7 @@ class AbstractSQL
         }
 
         // Remove id from insert columns, if needed
-        if ($has_id === false && $key = array_search('id', $insert_columns)) { 
+        if ($has_id === false && (false !== ($key = array_search($primary_key, $insert_columns)))) {
             array_splice($insert_columns, $key, 1);
         }
 
@@ -195,8 +198,11 @@ class AbstractSQL
             $args[0] = FromInstance::map($args[0], $columns);
         }
 
+        // Get primary key
+        $primary_key = $this->db->getPrimaryKey($table_name);
+
         // Check for id = 0, and insert
-        if (isset($args[0]['id']) && (int) $args[0]['id'] == 0) { 
+        if (isset($args[0][$primary_key]) && (int) $args[0][$primary_key] == 0) { 
             $this->insert($table_name, $args[0]);
             return;
         }

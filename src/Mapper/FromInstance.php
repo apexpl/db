@@ -63,6 +63,8 @@ class FromInstance
             $name = $prop->getType()?->getName();
             if ($name == 'DateTime') { 
                 $value = $value->format('Y-m-d H:i:s');
+            } elseif (enum_exists($name)) {
+                $value = $value->value;
             }
         }
 

@@ -152,7 +152,7 @@ class AbstractSQL
             $placeholders = [];
             foreach ($set as $column => $value) { 
 
-                if ($column == $primary_key && (int) $value == 0) { 
+                if ($column == $primary_key && in_array((string) $value, ['', '0'])) {
                     continue; 
                 } elseif ($column == $primary_key) { 
                     $has_id = true;

@@ -158,6 +158,11 @@ class AbstractSQL
                     $has_id = true;
                 }
 
+                // Format blank integer, if needed
+                if ($value == '' && preg_match("/(int|numeric|decimal)/i", $columns[$column])) {
+                    $value = '0';
+                }
+
                 // Add to value set
                 $placeholders[] = $this->formatter::getPlaceholder($columns[$column]);
                 $values[] = $value;
@@ -169,6 +174,12 @@ class AbstractSQL
         if ($has_id === false && (false !== ($key = array_search($primary_key, $insert_columns)))) {
             array_splice($insert_columns, $key, 1);
         }
+
+$tmp = []; $x=0; foreach ($insert_columns as $col) { $tmp[$col] = $values[$x]; $x++; } 
+if (in_array('Future_Studio_Token', $values) || in_array('MAKERS', $values)) {
+    //print_r($tmp); exit;
+}
+
 
         // Finish SQL
         $sql = "INSERT INTO $table_name (" . implode(', ', $insert_columns) . ") VALUES ";
@@ -214,6 +225,11 @@ class AbstractSQL
             // Check if column exists
             if (!isset($columns[$column])) { 
                 throw new DbColumnNotExistsException("Unable to perform insert_or_update, as column '$column' does not exist in the table '$table_name'");
+            }
+
+            // Format blank integer, if needed
+            if ($value == '' && preg_match("/(int|numeric|decimal)/i", $columns[$column])) {
+                $value = '0';
             }
 
             // Add variables to sql
@@ -270,6 +286,11 @@ class AbstractSQL
             // Ensure column exists in table
             if (!isset($columns[$column])) { 
                 throw new DbColumnNotExistsException("Unable to perform update as column '$column' does not exist in the table '$table_name'");
+            }
+
+            // Format blank integer, if needed
+            if ($value == '' && preg_match("/(int|numeric|decimal)/i", $columns[$column])) {
+                $value = '0';
             }
 
             // Set SQL variables

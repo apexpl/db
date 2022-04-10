@@ -200,12 +200,12 @@ class PostgreSQL extends AbstractSQL implements DbInterface
                 $is_auto_increment = true;
                 $default = '';
             }
+            $default = trim(preg_replace("/::.*$/", "", $default), "'");
 
             // Default for boolean
             if ($type == 'boolean') { 
                 $default = $default == 'true' ? true : false;
             }
-
 
             // Set in results
             $results[$col_name] = [

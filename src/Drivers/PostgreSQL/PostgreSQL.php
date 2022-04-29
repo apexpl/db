@@ -353,7 +353,7 @@ class PostgreSQL extends AbstractSQL implements DbInterface
     /**
      * Add time
      */
-    public function addTime(string $period, int $length, string $from_date, bool $return_datestamp = true):string
+    public function addTime(string $period, int $length, string $from_date = '', bool $return_datestamp = true):string
     {
 
         // Check for valid period
@@ -361,8 +361,15 @@ class PostgreSQL extends AbstractSQL implements DbInterface
             throw new DbInvalidArgumentException("Invalid time period specified, $period.  Supported values are:  second, minute, hour, day, week, month, quarter, year");
         }
 
+        // Get from date
+        if ($from_date == '') {
+            $from_date = 'now()';
+        } else {
+            $from_date = "timestamp '$from_date'";
+        }
+
         // Get function name
-        $func_name = "DATE('$from_date') + JUSTIFY_INTERVAL('$length $period')";
+        $func_name = "$from_date + INTERVAL '$length $period'";
         if ($return_datestamp === false) { $func_name = 'EXTRACT(EPOCH FROM ' . $func_name . ')'; }
 
         // Get and return date
@@ -372,7 +379,7 @@ class PostgreSQL extends AbstractSQL implements DbInterface
     /**
      * Subtract time
      */
-    public function subtractTime(string $period, int $length, string $from_date, bool $return_datestamp = true):string
+    public function subtractTime(string $period, int $length, string $from_date = '', bool $return_datestamp = true):string
     {
 
         // Check for valid period
@@ -380,8 +387,15 @@ class PostgreSQL extends AbstractSQL implements DbInterface
             throw new DbInvalidArgumentException("Invalid time period specified, $period.  Supported values are:  second, minute, hour, day, week, month, quarter, year");
         }
 
+        // Get from date
+        if ($from_date == '') {
+            $from_date = 'now()';
+        } else {
+            $from_date = "timestamp '$from_date'";
+        }
+
         // Get function name
-        $func_name = "DATE('$from_date') - JUSTIFY_INTERVAL('$length $period')";
+        $func_name = "$from_date - INTERVAL '$length $period'";
         if ($return_datestamp === false) { $func_name = 'EXTRACT(EPOCH FROM ' . $func_name . ')'; }
 
         // Get and return date

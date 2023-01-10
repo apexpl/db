@@ -58,6 +58,11 @@ class FromInstance
         // Initialize
         $value = $prop->getValue($obj);
 
+        // Check for uninion type
+        if ($prop->hasType() && $prop->getType()::class == 'ReflectionUnionType') {
+            return $value;
+        }
+
         // Check if has type
         if ($prop->hasType() === true && $prop->getType()->isBuiltin() !== true && $value !== null) { 
             $name = $prop->getType()?->getName();

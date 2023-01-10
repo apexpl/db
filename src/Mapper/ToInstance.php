@@ -85,8 +85,15 @@ class ToInstance
                 continue;
             }
 
+            // Check for union type
+            $type = $prop->getType();
+            if ($type::class == 'ReflectionUnionType') {
+                $args[$name] = $row[$name];
+                continue;
+            }
+
             // Get property type
-            $type = $prop->getType()?->getName();
+            $type = $type?->getName();
             if ($type === null) { 
                 $args[$name] = $row[$name];
                 continue;

@@ -5,6 +5,7 @@ namespace Apex\Db\Wrappers;
 
 use \Doctrine\ORM\Tools\Setup;
 use \Doctrine\ORM\EntityManager;
+use Doctrine\DBAL\DriverManager;
 use Apex\Db\Exceptions\DbWrapperException;
 use Apex\Db\Interfaces\DbInterface;
 use \PDO;
@@ -26,30 +27,39 @@ class Doctrine
         $isDevMode = $opts['isDevMode'] ?? false;
         $proxyDir = $opts['proxyDir'] ?? null;
         $cache = $opts['cache'] ?? null;
-        $useSimpleAnnotationReader = $opts['useSimpleAnnotationReader'] ?? null;
+        $useSimpleAttributeReader = $opts['useSimpleAttributeReader'] ?? null;
 
         // Create config
-        $config = Setup::createAnnotationMetadataConfiguration($entityPaths, $isDevMode, $proxyDir, $cache, $useSimpleAnnotationReader);
-        $conn_opts = ['pdo' => $db->connect_mgr->getConnection('write')];
+        //$config = Setup::createAnnotationMetadataConfiguration($entityPaths, $isDevMode, $proxyDir, $cache, $useSimpleAnnotationReader);
+        $config = Setup::createAttributeMetadataConfiguration($entityPaths, $isDevMode, $proxyDir, $cache, $useSimpleAttributeReader);
+
+        // Get connection
+        $conn_opts = [
+            'pdo' => $db->connect_mgr->getConnection('write'),
+            'driver' => 'pdo_mysql'
+        ];
+        $connection = DriverManager::getConnection($conn_opts);
 
         // Init and return
-        return EntityManager::create($conn_opts, $config);
+        $manager = new EntityManager($connection, $config);
+        return $manager;
     }
 
     /**
      * Import
      */
-    public static function import(DbInterface $db, EntityManager $manager)
+    public static function import(DbInterface $db, EntityManager $manager):DbInterface
     {
 
         // Get PDO object
-        $pdo = $manager->getConnection()->getWrappedConnection();
+        $pdo = $manager->getConnection()->getParams()['pdo'];
         if (!$pdo instanceof \PDO) { 
             throw new DbWrapperException("Unable to import Doctrine instance, as did not get a PDO instance.  Got a " . $pdo::class . " instance instead.");
         }
 
         // Import connection
         $db->connect_mgr->importConnection($pdo);
+        return $db;
     }
 
 }

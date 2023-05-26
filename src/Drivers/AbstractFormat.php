@@ -28,7 +28,7 @@ class AbstractFormat
         // Check if value valid
         $is_valid = match (true) {
             ($type == 'i' && !preg_match("/[0-9]+/", ltrim($value, '-'))) ? true : false => false, 
-            ($type == 'd' && !preg_match("/^[0-9]+(\.[0-9]{1,8})?$/", ltrim($value, '-'))) ? true : false => false, 
+            ($type == 'd' && !preg_match("/^[0-9]+(\.[0-9]+)?$/", ltrim($value, '-'))) ? true : false => false, 
             ($type == 'b' && !in_array($value, ['0', '1'])) ? true : false => false, 
             ($type == 'email' && !filter_var($value, FILTER_VALIDATE_EMAIL)) ? true : false => false, 
             ($type == 'url' && !filter_var($value, FILTER_VALIDATE_URL)) ? true : false => false, 

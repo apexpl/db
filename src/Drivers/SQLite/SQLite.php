@@ -77,6 +77,9 @@ class SQLite extends AbstractSQL implements DbInterface
         // Enable foreign keys
         $conn->query("PRAGMA foreign_keys = ON");
 
+        // Set connection info
+        $this->setConnectionInfo($dbname, $user, $password, $host, $port);
+
         // Return
         return $conn;
     }

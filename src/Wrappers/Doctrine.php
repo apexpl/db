@@ -33,11 +33,18 @@ class Doctrine
         //$config = Setup::createAnnotationMetadataConfiguration($entityPaths, $isDevMode, $proxyDir, $cache, $useSimpleAnnotationReader);
         $config = Setup::createAttributeMetadataConfiguration($entityPaths, $isDevMode, $proxyDir, $cache, $useSimpleAttributeReader);
 
+        // Get driver
+        if (str_ends_with($db::class, 'PostgreSQL')) {
+            $driver = 'pdo_pgsql';
+        } elseif (str_ends_with($db::class, 'SQLite')) {
+            $driver = 'pdo_sqlite';
+        } else {
+            $driver = 'pdo_mysql';
+        }
+
         // Get connection
-        $conn_opts = [
-            'pdo' => $db->connect_mgr->getConnection('write'),
-            'driver' => 'pdo_mysql'
-        ];
+        $conn_opts = $db->getConnectionInfo();
+        $conn_opts['driver'] = $driver;
         $connection = DriverManager::getConnection($conn_opts);
 
         // Init and return

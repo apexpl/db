@@ -89,6 +89,9 @@ class PostgreSQL extends AbstractSQL implements DbInterface
             throw new DbConnectException("Unable to set charset to $this->charset, error: " . $e->getMessage());
         }
 
+        // Set connection info
+        $this->setConnectionInfo($dbname, $user, $password, $host, $port);
+
         // Return
         return $conn;
     }

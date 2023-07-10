@@ -23,6 +23,7 @@ class AbstractSQL
     public DbInterface $db;
     public Connections $connect_mgr;
     public ?DebuggerInterface $debugger;
+    protected array $connection_info;
 
     // Array properties
     protected array $prepared = [];
@@ -36,6 +37,32 @@ class AbstractSQL
     protected bool $force_write_always = false;
     protected int $in_transaction = 0;
 
+
+    /**
+     * Set connection info
+     */
+    public function setConnectionInfo(string $dbname, string $user, string $password, string $host, int $port):void
+    {
+
+        // Set info
+        $this->connection_info = [
+            'dbname' => $dbname,
+            'user' => $user,
+            'password' => $password,
+            'host' => $host,
+            'port' => $port
+        ];
+
+    }
+
+    /**
+     * Get connection info
+     */
+    public function getConnectionInfo():array
+    {
+        $conn = $this->connect_mgr->getConnection('write');
+        return $this->connection_info;
+    }
 
     /**
      * Set the formatter object.  Used internally.

@@ -80,6 +80,9 @@ class mySQL extends AbstractSQL implements DbInterface
             throw new DbConnectException("Unable to set timezone offset to $this->tz_offset, error: " . $e->getMessage());
         }
 
+        // Set connection info
+        $this->setConnectionInfo($dbname, $user, $password, $host, $port);
+
         // Return
         return $conn;
     }

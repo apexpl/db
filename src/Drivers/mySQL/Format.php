@@ -50,7 +50,7 @@ class Format extends AbstractFormat
                     $value = $args[1][$match[2]];
                 }
             }
-        if (Value instanceof(\DateTime)) {
+        if (is_object($value) && $value::class == 'DateTime') {
             $orig_value = $value->format('Y-m-d H:i:s');
         } else {
                 $orig_value = (string) $value;

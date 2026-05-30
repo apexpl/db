@@ -422,6 +422,7 @@ if (in_array('Future_Studio_Token', $values) || in_array('MAKERS', $values)) {
             $id_col = $this->db->getPrimaryKey($table_name);
             $this->primary_keys[$table_name] = $id_col;
         }
+        if ($id_col == '') { $id_col = 'id'; }
 
         // Get first row
         if (!$row = $this->getRow("SELECT * FROM $table_name WHERE $id_col = %s ORDER BY $id_col LIMIT 1", $id)) { 
